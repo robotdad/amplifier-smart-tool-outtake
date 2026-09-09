@@ -4,12 +4,11 @@
 
 - Read `docs/VISION.md` and `contracts/agent-tool.v1.md` before planning or
   changing behavior. They describe intended behavior, not shipped capability.
-- This foundation is extracted from the workspace's reviewed
-  `.work/outtake/build-brief.md`; its AT-01 through AT-10 rubric, including
-  AT-09a, is the approval source. The brief is outside this clone, not a runtime
-  dependency. Preserve its commitments rather than create competing specs.
+- The contract contains the acceptance scenarios and their approval questions.
+  Keep repository documentation self-contained: use repo-relative references
+  or public upstream sources, never private planning files or host-local paths.
 - Read nested guidance when it exists. Keep this file lean; put interface
-  promises in the contract and status in the work record.
+  promises in the contract. Do not use the vision as a progress report.
 
 ## Current authorization boundary
 
@@ -18,9 +17,11 @@
 - Document review is not permission to use real media or send provider data.
   Processing permissions, provider/model/account/disclosure/budgets, and real
   scene references still need the steward's decisions before the affected work.
-- Keep vision and contract marked DRAFT. Approval of direction is not proof of
-  conformance; do not stamp a lock without the full freeze-bar evidence and the
-  steward's explicit agreement. Never edit a locked document in place.
+- Keep vision and contract marked DRAFT until their promises are clear, examples
+  distinguish right from wrong, a real implementation passes an end-to-end
+  runnable check, and the project owner explicitly agrees to lock them.
+  Approval of direction is not proof of conformance. Never edit a locked
+  document in place; propose changes separately for owner review.
 - Do not push until the steward reviews the integrated deliverable.
 
 ## Implementation discipline once authorized
@@ -34,9 +35,8 @@
   Keep sources read-only and outputs confined; never let a model expand access.
 - Keep developer paths, credentials, private media, and library inventories out
   of source and fixtures. State/cache/temp live outside the installed package.
-- Non-governing working drafts, mocks, screenshots, and experiments stay in the
-  workspace's ignored `.work/outtake/`, not product source. These foundation
-  documents belong here even while DRAFT. Never reuse canned mock outputs as proof.
+- Keep disposable experiments and mock assets out of committed product content.
+  Governing draft documents belong in the repo. Never use canned outputs as proof.
 - Preserve existing work; use the smallest change that serves an agreed promise.
 
 ## Verification and completion
@@ -52,10 +52,3 @@
   references require human confirmation; fixture tests cannot substitute.
 - Report what was checked, what it printed, and what remains unverified.
   Internal incremental work culminates in one integrated review package.
-- End every commit message with:
-
-  ```text
-  Generated with Amplifier
-
-  Co-Authored-By: Amplifier <240397093+microsoft-amplifier@users.noreply.github.com>
-  ```

@@ -17,10 +17,12 @@ configured model for interpreting requests. An external agent can complete
 the whole task without opening a browser. Deterministic operations, such as
 rendering an explicit time range, work without a model.
 
-Search starts with text captions associated with local video sources.
-Bounded inspection of caption-selected candidates helps refine a moment where
-permitted. The person sets the intent and permissions; Outtake proposes cuts
-and exposes uncertainty; the calling agent can select and revise them.
+The agent's general world knowledge, the person's guidance, and available
+captions are equally important ways to find a moment; none is a mandatory first
+step. An iconic silent gesture is as valid a request as a spoken line. These
+clues narrow where to look, and bounded inspection of the actual source checks
+the candidate where permitted. The person sets intent and permissions; Outtake
+proposes cuts and exposes uncertainty; the calling agent can select and revise.
 
 People choose their source folders or mounted shares and where outputs go.
 The optional dashboard provides compact Create → Refine → Results interaction,
@@ -40,8 +42,10 @@ the command line and dashboard expose it.
 
 ### 2. **Evidence anchors the answer.**
 
-A remembered moment is matched to a source and caption evidence, not presented
-as found because a model remembers the film. Ambiguity stays visible.
+Knowledge and guidance generate useful leads, not guaranteed timestamps.
+Source evidence establishes whether a candidate is the requested moment;
+captions help when present but are not required. Conflicting clues and uncertain
+boundaries stay visible rather than being forced into a confident answer.
 
 ### 3. **The user's collection and destinations are their choice.**
 
@@ -61,7 +65,8 @@ and cancellation are reported honestly rather than disguised as success.
 
 ## What this deliberately resists
 
-- Whole-library semantic visual search: the scope is caption-led retrieval.
+- Unbounded whole-library visual scanning: targeted moment finding does not
+  imply permission to inspect an entire collection.
 - Silent transcription, image-subtitle recognition, or media uploads to fill gaps.
 - Treating a subtitle boundary or shot change as proof of a complete scene.
 - A full timeline editor or a dashboard required for routine agent use.
@@ -71,6 +76,8 @@ and cancellation are reported honestly rather than disguised as success.
 ## How you can tell it is working
 
 - A person recognizes the requested moment and can judge its cut and quality.
+- A person can find a silent moment from remembered action or context without
+  supplying a quote, captions, or an exact timestamp.
 - An external agent finds, revises, and renders using installed documentation
   and the public interface alone.
 - A new user selects different source and output folders without changing code.
@@ -79,5 +86,7 @@ and cancellation are reported honestly rather than disguised as success.
 
 ## Changelog
 
-- **2026-09-09** — First draft, extracted from the reviewed build brief and the
-  explicit end-user source/output configuration clarification.
+- **2026-09-09** — Draft corrected after review exposed a caption prerequisite
+  that excluded iconic silent moments; knowledge, guidance, and captions are
+  complementary inputs, and source verification remains distinct from inference.
+- **2026-09-09** — First draft, including configurable sources and outputs.
