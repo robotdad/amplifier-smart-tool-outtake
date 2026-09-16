@@ -66,13 +66,7 @@
               </p>
               <button id="empty-search">Find a moment</button>
             </div>
-            <video
-              id="video"
-              controls
-              playsinline
-              preload="metadata"
-              hidden
-            ></video
+            <video id="video" playsinline preload="metadata" hidden></video
             ><img id="image" alt="Selected source frame" hidden />
             <div id="live-overlay" hidden></div>
             <div id="preview-label" class="preview-label" hidden>
@@ -111,7 +105,9 @@
               />
             </div>
             <div class="trim-actions">
-              <button id="play-selection">▶ Play selection</button>
+              <button id="play-selection" aria-label="Play selected clip">
+                ▶ Play
+              </button>
               <button
                 id="loop-selection"
                 type="button"
@@ -137,7 +133,6 @@
               </button>
               <button id="set-start">Set start here</button>
               <button id="set-end">Set end here</button>
-              <button id="expand-context">Expand ±15s</button>
             </div>
             <div id="playhead-time" class="hint" aria-live="off">
               Playhead · 0:00.00
@@ -176,6 +171,16 @@
             <span class="small muted" id="dirty-label">Choose a moment</span>
           </div>
           <fieldset id="edit-controls" disabled>
+            <div class="control-group">
+              <div class="section-label">ORIGINAL SOURCE</div>
+              <button id="expand-context" type="button">
+                Show more from original source
+              </button>
+              <p class="hint">
+                Load 15 seconds before and after this clip. Your export
+                selection stays unchanged.
+              </p>
+            </div>
             <div class="control-group">
               <div class="section-label">
                 THE CUT <span id="duration-label">—</span>

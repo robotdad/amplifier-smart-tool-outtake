@@ -180,6 +180,6 @@ expected pixels and audio; real scene trials remain separate.
 The draft contracts now require default caption cue import, multiple timed text
 cues, discoverable fonts, editable moment titles, explicit export deletion and
 mobile-oriented size choices. These are requirements, not current API support.
-Unified playback controls and relocating original-source context under Refine are
-also agreed UI follow-ups. The current live text draft is approximate; the exact
+The dashboard now uses one selection play/pause control and places original-source
+context expansion under Refine. The current live text draft is approximate; the exact
 render remains authoritative. Keep installed help truthful until capabilities ship.

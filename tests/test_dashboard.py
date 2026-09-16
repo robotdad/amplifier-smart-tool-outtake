@@ -224,6 +224,17 @@ def test_browser_trim_selection_playback_and_export(tool, fixture_video):
             "Ready to refine. Your earlier exports stay unchanged."
         )
         page.wait_for_function("() => document.querySelector('#video').readyState >= 2")
+        assert not page.locator("#video").evaluate("v => v.controls")
+        expect(page.locator("#edit-controls #expand-context")).to_be_visible()
+        page.locator("#play-selection").click()
+        expect(page.locator("#play-selection")).to_have_attribute(
+            "aria-label", "Pause selected clip"
+        )
+        page.locator("#play-selection").click()
+        assert page.locator("#video").evaluate("v => v.paused")
+        expect(page.locator("#play-selection")).to_have_attribute(
+            "aria-label", "Play selected clip"
+        )
         calls = []
         page.on(
             "request",

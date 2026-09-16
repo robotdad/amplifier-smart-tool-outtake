@@ -698,13 +698,22 @@ async function preparePlayback(start = clipStart, end = clipEnd) {
   });
 }
 event("play-selection", "click", async () => {
+  const video = $("video");
+  if (!video.paused && !video.ended) {
+    video.pause();
+    return;
+  }
   const start = Number($("start").value),
     end = Number($("end").value);
   if (!playbackReady || start < mediaStart || end > mediaEnd)
     await preparePlayback();
   $("video").muted = format === "gif" || !$("audio").checked;
-  $("video").currentTime = start - mediaStart;
-  await $("video").play();
+  if (
+    video.currentTime < start - mediaStart ||
+    video.currentTime >= end - mediaStart
+  )
+    video.currentTime = start - mediaStart;
+  await video.play();
 });
 event("expand-context", "click", async () => {
   const start = Math.max(0, clipStart - 15),
@@ -830,6 +839,17 @@ function updateLiveOverlay() {
   $("preview-label").textContent =
     "Live text draft · Preview edits for final appearance";
 }
+function updatePlaybackButton() {
+  const playing = playbackReady && !$("video").paused && !$("video").ended;
+  $("play-selection").textContent = playing ? "Ⅱ Pause" : "▶ Play";
+  $("play-selection").setAttribute(
+    "aria-label",
+    playing ? "Pause selected clip" : "Play selected clip",
+  );
+}
+event("video", "play", updatePlaybackButton);
+event("video", "pause", updatePlaybackButton);
+event("video", "ended", updatePlaybackButton);
 function playbackTick() {
   constrainPlayback();
   updatePlayhead();
