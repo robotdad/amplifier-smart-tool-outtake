@@ -3,6 +3,8 @@
 **Who builds against this:** People using Outtake through external agents, scripts,
 library integrations, and the optional dashboard depend on the same public behavior.
 There is no reference implementation yet; the conformance kit below is a plan.
+The [calling-agent contract](caller-interaction.v1.md) defines context, ownership,
+source resolution, questions, and continuity across the public boundary.
 
 ## What it looks like
 
@@ -32,7 +34,7 @@ traceable artifact. Configuration and permissions belong to the caller.
 1. **Every domain capability is available through both library and CLI.** Required capabilities are moment finding, smart end-to-end making, scoped cataloging, plan validation, preview, rendering, manifest discovery, and headless selection/revision of cuts, ordering, frames, overlays, and output. One library owns behavior; adapters add no private domain logic.
 2. **Normal calls are headless and machine-readable.** Plans and results have versioned JSON schemas. CLI JSON goes to stdout, progress/warnings to stderr, and operational failures exit non-zero without interactive prompts. Concise `-h` and detailed `--help` document arguments, results, AI use, artifacts, and remedies; no UI server or browser session is required.
 3. **Users configure source roots and output destinations.** Documented configuration and library/CLI inputs accept local folders or mounted shares without code edits. Per-invocation values override configured defaults within caller-approved roots; models and plans cannot expand permissions. Unreadable sources, unwritable destinations, and unauthorized overrides return actionable errors without silent fallback; developer trial paths are not prerequisites.
-4. **Smart retrieval uses knowledge, user guidance, and captions without a fixed hierarchy.** Outtake owns its configured model dependency and accepts the calling agent's knowledge and the user's contextual clues as first-class inputs, equally important to finding a moment as available captions. Any can identify a source or candidate range; captions are not a prerequisite for bounded source inspection or silent-moment retrieval. Inferred locations remain hypotheses until checked against source evidence. The model receives bounded evidence, not filesystem access; uncertain occurrences, conflicting clues, or boundaries remain explicit.
+4. **Smart retrieval uses knowledge, user guidance, and captions without a fixed hierarchy.** Outtake uses Amplifier Agent for its intelligence layer, owns its configured model dependency, and accepts the calling agent's knowledge and the user's contextual clues as first-class inputs, equally important to finding a moment as available captions. Any can identify a source or candidate range; captions are not a prerequisite for bounded source inspection or silent-moment retrieval. Inferred locations remain hypotheses until checked against source evidence. The model receives bounded evidence, not filesystem access; uncertain occurrences, conflicting clues, or boundaries remain explicit.
 5. **Missing captions are a limitation of caption operations, not of the request.** Silent moments and sources with no text captions remain eligible for knowledge- or guidance-led retrieval and permitted source inspection. A specifically requested caption-dependent operation without text captions returns `MISSING_TEXT_CAPTIONS`; generic finding does not fail for that reason alone. If available clues and permitted inspection cannot locate or verify a moment, return an actionable limitation or ambiguity, not an invented match. No implicit OCR, transcription, or upload fills the gap. An explicit known-source timestamp/range remains provider-free; caption and shot boundaries alone do not establish a complete scene.
 6. **Edits are immutable, serializable plans.** Each plan identifies its schema and plan version, source identities/fingerprints, selection provenance (knowledge/user guidance and source observations, caption anchors when used, or caller-specified range), requested/resolved time/frame basis, ordered clip IDs, per-clip overlay mode/text/style, still or sequence target, and audio/transition/output/destination/resource policies. Provenance distinguishes supplied clues, inferred hypotheses, and observed source evidence; caption evidence includes identity/version, language, time base, and offset. A selection, trim, order, frame, appearance, or output revision yields a new plan identity/version; saved plans require no browser state.
 7. **Rendering validates the plan against current sources and policy.** Every render rechecks identities, ranges, and permissions even after earlier validation; changed sources or caption evidence fail as `STALE_SOURCE` rather than silently rendering different material. Receipts bind plan and artifact IDs/paths to resolved sources, timing, transformations, warnings, and failure/cancellation details.
@@ -45,10 +47,44 @@ traceable artifact. Configuration and permissions belong to the caller.
 14. **The dashboard is an optional runtime adapter, not a capability gate.** When delivered it exposes compact Create → Refine → Results, actual generated playback/downloads, trim/reorder and per-clip appearance, using the same plans/configuration/validation. Browser presentation and explicit server lifecycle are surface-specific; UI-only domain behavior is forbidden. Launch is explicit, loopback by default, with no automatic LAN exposure; registered artifact IDs replace arbitrary paths, and viewing existing artifacts requires no model credential.
 15. **The installed package truthfully describes its capabilities.** Git installation, one packaged `SMART_TOOL.md`, and root `smart-tool.json` provide documented library/CLI use, manifest location, CLI argv, and a real provider-free deterministic smoke capability. Required manifest fields are nonempty, package/manifest versions agree, prerequisites are documented, and platform claims match verified installations.
 
+## Evidence available to the intelligence layer
+
+These are behavioral obligations on Outtake's internal capabilities, not a tool
+inventory or API design. Amplifier Agent is the chosen intelligence layer;
+specific runtime versions, providers, and capability compatibility are unverified.
+
+- **Resolve and inspect within scope.** Intelligence can request source resolution,
+  available metadata/caption evidence, and bounded observations of relevant source
+  intervals. It need not ask the calling agent to perform Outtake's internal media
+  inspection. Requests are mediated by enforced access and resource limits; the
+  model has no unrestricted filesystem, shell, or permission-changing capability.
+- **Use actual visual evidence.** With authorized frame disclosure and a compatible
+  vision-capable provider, intelligence can examine images sampled from the source
+  and request further bounded observations to locate or refine a candidate. Each
+  observation identifies its source and presentation time. Multiple observations
+  preserve temporal order and expose sampling gaps; a sampled still alone does not
+  establish movement, a transition, or absence of an event between samples.
+- **Support the requested event and cut.** Evidence must support the relevant
+  action, dialogue, or transition and the proposed beginning/end, with uncertainty
+  visible. Caption matches and related images may locate candidates without proving
+  the whole moment. A visual match does not prove a nonverbal sound. Where sound is
+  essential, disclose what audible evidence is available or return the specific
+  verification limitation; do not describe visual inference as listening.
+- **Separate observation from interpretation.** Source observations, supplied clues,
+  model hypotheses, and human confirmation remain distinguishable in public
+  provenance. The caller receives useful evidence and limitations, not a requirement
+  to inspect private reasoning. Model assertions do not replace source validation.
+- **Make missing capability actionable.** A provider without the needed vision
+  support cannot silently pass visual verification. Unsupported observation types,
+  denied disclosure, and exhausted budgets are reported distinctly. All internal
+  attempts share the invocation limits in clause 12; another observation request
+  does not create a fresh budget. Local frame extraction and deterministic rendering
+  remain provider-free; model interpretation is smart work.
+
 ## What v1 deliberately does NOT freeze
 
 - Function/command spellings, schema layout details, and configuration syntax: promote before external clients first depend on them, with round-trip examples and compatibility checks.
-- Language, database, process layout, renderer acceleration, and dashboard framework: internal choices get tests, not promises; promote only if an external consumer depends on their behavior.
+- Language, database, process layout, renderer acceleration, internal intelligence-tool interfaces, and dashboard framework: internal choices get tests, not promises; promote only if an external consumer depends on their behavior.
 - Specific providers, models, numerical budgets, fonts, and output profiles: select before their acceptance cases execute; changing a user-visible promise requires revisiting the affected clause.
 - Latency, throughput, and broad platform coverage: promote only when representative installed runs establish a meaningful supported guarantee.
 
@@ -65,6 +101,8 @@ are fixed independently before execution; skipped rows never count as passed.
 | AT-02 / 1, 5, 7, 12 | With credentials absent and provider network denied, local-fixture manifest/catalog/validate/preview/render produce fresh valid artifacts; malformed fixtures fail with expected codes. Independent markers/hashes and receipts are the oracle. | Cached model results or pre-existing artifacts. |
 | AT-03 / 4 | The chosen real source/occurrence belongs to the human-approved expected set; anchors trace to caption text and offset. The steward confirms independently prepared reference windows and acceptable bounds, recorded by name/date. | Repeated dialogue, recaps, drift, or a traceable wrong occurrence. |
 | AT-03a / 4, 5, 6, 10 | A real silent moment is found without a quote, text captions, or supplied exact timecodes: test both a knowledge-led request and a user-guided request. Pass only if each selected source/occurrence and cut are in the independently human-approved expected set and provenance separates clues/inference from source observations. Repeat with a misleading clue: it must not yield an unsupported confident match. | Memorized timecodes, a different edit of the film, hidden caption dependence, supplied reference windows leaking into the search, or attractive but wrong imagery. |
+| AT-03b / 4, 5, 6; evidence obligations | Human-approved transition and moving-action examples are located without supplied timecodes; timestamped, ordered source observations support the event and proposed boundaries. Sound-dependent examples distinguish actual audible evidence from inference and report missing verification honestly. | Related stills mistaken for an event; gaps in sampling hidden; visual expression mistaken for heard audio. |
+| AT-03c / 4, 12, 13; evidence obligations | Controlled observations and provider/audit records show bounded source-linked evidence reaches the intelligence layer, unsupported vision is explicit, and repeated internal requests cannot expand scope or reset caps. | Model-authored evidence, undeclared uploads, or a fresh budget per internal call. |
 | AT-04 / 4, 5, 10 | Fixed ambiguity fixtures return needs_selection. No-text/image-caption fixtures fail specifically caption-dependent operations with MISSING_TEXT_CAPTIONS, not generic finding solely for absent captions. Insufficient clues or prohibited inspection produce actionable limitations without unauthorized fallback; explicit timestamp rendering still succeeds. Fixture-specific expected outcomes are fixed before execution. | Weak matches pass as unique; blanket caption errors conceal an unimplemented path; hidden OCR/transcription. |
 | AT-05 / 7, 8, 9 | Visible frame IDs prove first-frame selection; decoded duration differs from the independent expected timeline by at most one output-frame interval. Audio markers stay within max(one output frame, 25 ms); container metadata handles encoder delay, not tolerance inflation. Profiles fix frame rate/scaling/HDR policy before execution. | Keyframe seeks, metadata-only checks, or declared padding conceal drift. |
 | AT-06 / 8, 13 | Independent pixels/reference images show planned and receipted text/style in the output; hostile HTML/shell-like strings do not execute. Placement tolerance is proposed at 3 pixels, subject to rubric approval. | Rasterization variance, hidden text, or metadata substituted for pixels. |
@@ -76,9 +114,16 @@ are fixed independently before execution; skipped rows never count as passed.
 
 ## Reserved / open questions (NOT frozen)
 
-- Processing host, read-only source scope, writable output location, and bounded preflight need explicit authorization; broader cataloging is not implied.
+- A local collection has been made available for investigation. Each execution must use the applicable caller-approved source/output scope; its private location is not a product default or prerequisite. Broader cataloging is not implied.
 - Named provider/model/account, terms review, disclosure categories including candidate frames, and exact model/render budgets remain approval choices; none are authorized by this draft.
-- Real captioned and silent film/show moment requests and human-confirmed reference cuts/quality remain missing; generated fixtures cannot establish those semantic outcomes.
+- Concrete test requests, source editions/episodes, occurrences, and human-confirmed reference cuts/quality must be selected before acceptance runs; generated fixtures cannot establish those semantic outcomes.
+- Sound-dependent verification within the current no-raw-audio-disclosure policy remains unresolved. Vision support alone does not establish audio understanding; any policy change requires an explicit contract revision.
 - The bounded source-inspection strategy for knowledge- and guidance-led candidates, including silent moments, needs implementation design and an approved test setup. The outcome is required; no particular search algorithm, whole-library scan, or new disclosure permission is implied.
 - Dashboard delivery remains in the proposed integrated scope and AT-10; optional at runtime does not waive its acceptance gate. Omitting it requires an explicit scope decision.
 - Upstream Smart Tools revision, supported platforms, package runner, and exact smoke invocation must be pinned from verified implementation evidence before release.
+
+## Changelog
+
+- **2026-09-16** — Added caller-contract linkage, Amplifier Agent direction,
+  and internal evidence obligations. These changes define behavior; no internal
+  tool interface or retrieval algorithm is frozen.

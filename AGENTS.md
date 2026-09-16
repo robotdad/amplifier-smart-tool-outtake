@@ -2,7 +2,8 @@
 
 ## Read first
 
-- Read `docs/VISION.md` and `contracts/agent-tool.v1.md` before planning or
+- Read `docs/VISION.md`, `contracts/agent-tool.v1.md`, and
+  `contracts/caller-interaction.v1.md` before planning or
   changing behavior. They describe intended behavior, not shipped capability.
 - The contract contains the acceptance scenarios and their approval questions.
   Keep repository documentation self-contained: use repo-relative references
@@ -13,10 +14,16 @@
 ## Current authorization boundary
 
 - Foundation documents only: no implementation, executable work items, worker
-  launches, media preflight/scanning, or provider configuration/calls yet.
-- Document review is not permission to use real media or send provider data.
-  Processing permissions, provider/model/account/disclosure/budgets, and real
-  scene references still need the steward's decisions before the affected work.
+  launches, or provider configuration/calls yet. Feed investigation findings
+  back into vision and behavioral contracts; do not freeze technical interfaces.
+- The steward has made a local media collection available for investigation.
+  Keep its location and inventory outside repository content, preserve sources,
+  and keep inspection relevant and bounded. Local access does not authorize
+  provider disclosure or unbounded whole-library content scanning. Honor existing
+  session authorization without repeatedly asking for the same permission.
+- Amplifier Agent is the chosen intelligence layer, including vision-capable
+  providers for permitted source images. Provider/model/account/disclosure/budgets
+  and human-confirmed scene references remain decisions for the affected work.
 - Keep vision and contract marked DRAFT until their promises are clear, examples
   distinguish right from wrong, a real implementation passes an end-to-end
   runnable check, and the project owner explicitly agrees to lock them.
@@ -35,7 +42,9 @@
   Keep sources read-only and outputs confined; never let a model expand access.
 - Keep developer paths, credentials, private media, and library inventories out
   of source and fixtures. State/cache/temp live outside the installed package.
-- Keep disposable experiments and mock assets out of committed product content.
+- Keep working materials, including exploratory scenarios, in git-ignored `.work/`.
+  Governing documents must remain self-contained without relying on those files.
+  Keep disposable experiments and mock assets out of committed product content.
   Governing draft documents belong in the repo. Never use canned outputs as proof.
 - Preserve existing work; use the smallest change that serves an agreed promise.
 

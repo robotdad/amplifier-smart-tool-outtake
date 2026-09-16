@@ -2,7 +2,8 @@
 
 *For people working with an agent to retrieve and shape moments from their own
 video collection. The specific promises live in the
-[agent-tool contract](../contracts/agent-tool.v1.md).*
+[agent-tool contract](../contracts/agent-tool.v1.md) and
+[calling-agent contract](../contracts/caller-interaction.v1.md).*
 
 ## What Outtake is
 
@@ -12,8 +13,30 @@ Outtake to locate it, show the evidence, refine the selection, and produce the
 artifact. Remembering the scene is enough to begin; knowing its timestamp is
 not a prerequisite.
 
-Outtake is a Smart Tool: a library with a command-line interface and its own
-configured model for interpreting requests. An external agent can complete
+Exports serve everyday creative uses: sharing a clip with friends, making a
+reaction GIF or image meme, and extracting a higher-quality clip for editing
+into a film criticism piece on YouTube. Outtake offers GIFs, still images, and
+MP4 video, with a small set of familiar output choices suited to common sharing
+and editing needs. People can express the intended use without knowing encoding
+terminology. Convenient sharing balances file size and compatibility; material
+for further editing preserves the available source quality where practical.
+Exact presets and encoding settings remain open, with no ambition to cover
+esoteric formats or become a full video editor.
+
+The usual starting point is a known film or show and a remembered moment. The
+calling agent owns the conversation: it can help narrow a vague recollection
+before reaching for Outtake, then supply the title, description, and useful
+context. Outtake resolves the source in the permitted collection, locates and
+checks the moment, and returns material the caller can present and refine with
+the person. A known show need not mean a known episode, and a title need not
+identify a unique file or edition. Missing details become focused questions or
+bounded retrieval work, not a demand that the person already know the timestamp.
+
+Outtake is an Amplifier-powered Smart Tool: a library with a command-line
+interface and Amplifier Agent as its internal intelligence layer. Configured
+vision-capable providers allow it to interpret permitted images sampled from
+the actual source. The calling agent does not need to use Amplifier or operate
+Outtake's internal Agent sessions. An external agent can complete
 the whole task without opening a browser. Deterministic operations, such as
 rendering an explicit time range, work without a model.
 
@@ -23,6 +46,13 @@ step. An iconic silent gesture is as valid a request as a spoken line. These
 clues narrow where to look, and bounded inspection of the actual source checks
 the candidate where permitted. The person sets intent and permissions; Outtake
 proposes cuts and exposes uncertainty; the calling agent can select and revise.
+
+A moment may be a line, a gesture, a nonverbal sound, an action unfolding over
+time, or a transition between shots. Finding a related image is not necessarily
+finding the event: the bone-to-spacecraft transition in *2001* needs both sides
+of the cut; a flying car passing a billboard needs its movement and context.
+The evidence and proposed boundaries must support what the person asked for.
+Visual evidence alone does not establish that a particular sound occurred.
 
 People choose their source folders or mounted shares and where outputs go.
 The optional dashboard provides compact Create → Refine → Results interaction,
@@ -76,6 +106,8 @@ and cancellation are reported honestly rather than disguised as success.
 ## How you can tell it is working
 
 - A person recognizes the requested moment and can judge its cut and quality.
+- A person can obtain a convenient shareable GIF, image, or video, or a
+  higher-quality video clip for further editing, with understandable output choices.
 - A person can find a silent moment from remembered action or context without
   supplying a quote, captions, or an exact timestamp.
 - An external agent finds, revises, and renders using installed documentation
@@ -86,6 +118,11 @@ and cancellation are reported honestly rather than disguised as success.
 
 ## Changelog
 
+- **2026-09-16** — Clarified everyday sharing, meme creation, and higher-quality
+  editing uses for exports; specific output presets remain open.
+- **2026-09-16** — Clarified the calling-agent/Outtake boundary, the usual
+  known-title starting point, event-level evidence, and the choice of Amplifier
+  Agent with vision-capable providers. Concrete interfaces remain open.
 - **2026-09-09** — Draft corrected after review exposed a caption prerequisite
   that excluded iconic silent moments; knowledge, guidance, and captions are
   complementary inputs, and source verification remains distinct from inference.
