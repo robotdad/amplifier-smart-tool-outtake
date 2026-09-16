@@ -561,7 +561,8 @@ details[open] summary {
 .card-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   margin-top: 16px;
 }
 .card-actions a {
@@ -988,4 +989,27 @@ dialog::backdrop {
 .busy .card-actions .icon-action {
   pointer-events: none;
   opacity: 0.55;
+}
+
+.saved .page-heading {
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.saved-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.saved-tools label {
+  margin: 0;
+}
+.saved-tools select {
+  width: auto;
+  margin: 0;
+}
+.card-actions > button,
+.card-actions > a {
+  flex: 0 0 auto;
+  height: 36px;
 }

@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import uuid
+from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 
@@ -636,15 +637,39 @@ class Outtake:
         return {"schema_version": 1, "status": "ready", "plan_id": plan.id}
 
     @_io_errors
-    def saved_outputs(self, include_previews=False):
+    def saved_outputs(self, include_previews=False, sort_by="newest"):
         """Read published receipts. Private staging directories are never results."""
+        if sort_by not in {"newest", "oldest", "name", "size"}:
+            raise OuttakeError(
+                "INVALID_SORT", "Unknown output sort order.", "Choose newest, oldest, name or size."
+            )
         receipts = []
         for path in sorted(self.output.glob("export_*/receipt.json")):
             if path.is_symlink() or path.parent.is_symlink():
                 continue
             receipt = json.loads(path.read_text())
             if include_previews or receipt.get("purpose", "export") != "preview":
+                # Older receipts have no publication timestamp; do not rewrite them.
+                receipt.setdefault(
+                    "created_at",
+                    datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(),
+                )
                 receipts.append(receipt)
+
+        def created(receipt):
+            return datetime.fromisoformat(receipt["created_at"]).timestamp()
+
+        receipts.sort(key=lambda r: (created(r), r["artifact_id"]), reverse=True)
+        if sort_by == "oldest":
+            receipts.reverse()
+        elif sort_by == "name":
+            receipts.sort(
+                key=lambda r: (
+                    r["plan"].get("title") or Path(r["plan"]["source"]["path"]).stem
+                ).casefold()
+            )
+        elif sort_by == "size":
+            receipts.sort(key=lambda r: r["bytes"], reverse=True)
         return receipts
 
     def preview(self, plan: Plan | dict, *, cancelled=lambda: False):
@@ -881,6 +906,7 @@ class Outtake:
             # Check again before publication, including source changes during encoding.
             self._validate(plan, budget)
             receipt = {
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "schema_version": 1,
                 "purpose": purpose,
                 "status": "ready",

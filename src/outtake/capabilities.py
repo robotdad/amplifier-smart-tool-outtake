@@ -28,5 +28,5 @@ OPERATIONS = {
     "validate": "Validate a plan and current source: {plan: <plan object>}.",
     "preview": "Render the exact plan for local review: {plan: <plan object>}.",
     "render": "Publish artifact and receipt: {plan: <plan object>}.",
-    "saved-outputs": "List published receipts from the configured output folder. Input: {}.",
+    "saved-outputs": "List published receipts, newest first by default: {sort_by?: newest|oldest|name|size, include_previews?}.",
 }

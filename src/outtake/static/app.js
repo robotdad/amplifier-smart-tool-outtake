@@ -478,7 +478,7 @@ for (const boundary of ["start", "end"])
     edited();
   });
 async function refreshSaved() {
-  outputs = await api("saved_outputs");
+  outputs = await api("saved_outputs", {sort_by: $("saved-sort").value});
   $("saved-count").textContent = outputs.length;
   $("saved-grid").replaceChildren();
   if (!outputs.length) {
@@ -488,7 +488,7 @@ async function refreshSaved() {
       "Your exports will appear here. Previews stay in the workspace.";
     $("saved-grid").append(p);
   }
-  [...outputs].reverse().forEach((receipt) => {
+  outputs.forEach((receipt) => {
     const card = document.createElement("article");
     card.className = "output-card";
     const media = document.createElement(
@@ -690,6 +690,7 @@ event("saved-tab", "click", async () => {
   view("saved");
 });
 event("saved-refresh", "click", refreshSaved);
+event("saved-sort", "change", refreshSaved);
 for (const id of ["search-button", "empty-search"])
   event(id, "click", () => $("search-dialog").showModal());
 event("settings-button", "click", () => {

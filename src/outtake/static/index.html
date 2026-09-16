@@ -403,7 +403,16 @@
               something new.
             </p>
           </div>
-          <button id="saved-refresh">Refresh</button>
+          <div class="saved-tools">
+            <label for="saved-sort">Sort by</label>
+            <select id="saved-sort">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name">Name · A–Z</option>
+              <option value="size">Size · largest first</option>
+            </select>
+            <button id="saved-refresh">Refresh</button>
+          </div>
         </div>
         <div id="saved-grid" class="saved-grid"></div>
       </section>

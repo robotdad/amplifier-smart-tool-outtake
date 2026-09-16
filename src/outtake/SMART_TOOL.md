@@ -204,7 +204,7 @@ the parsed values rather than file references. Requests have these shapes:
 - `validate`: `{"plan":{...}}`; checks current source identity and configured limits.
 - `render`: `{"plan":{...}}`; produces a new export directory and receipt.
 - `preview`: same input/result as render; actual plan output for local review.
-- `saved-outputs`: `{}`; reads exported receipts, excluding previews. Use `{"include_previews":true}` to include them.
+- `saved-outputs`: `{}`; reads exported receipts newest first, excluding previews. `sort_by` also accepts `oldest`, `name` (A–Z), or `size` (largest first). New receipts record `created_at`; older receipts use the receipt file modification time. Use `{"include_previews":true}` to include them.
 - `preferences`: `{}`; current folders/limits, saved model grant and appearance, credential-availability booleans.
 - `configure`: `{"settings":{...},"model_grant":{...},"appearance":"system"}`; shared saved configuration. Omit/null the grant for deterministic use.
 - `review-frames`: `{"plan":{...}}`; five actual ordered source observations spanning the cut.

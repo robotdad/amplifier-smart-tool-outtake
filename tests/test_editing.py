@@ -95,3 +95,35 @@ def test_named_exports_presets_and_deletion(tool, fixture_video):
     assert tool.artifact(second["artifact_id"])["bytes"] > 0
     with pytest.raises(OuttakeError):
         tool.delete_output("../source")
+
+
+def test_saved_outputs_sort_by_publication_name_size_and_legacy_time(tool):
+    import json
+    import os
+
+    # UUID order deliberately disagrees with publication time and file mtime.
+    for identity, title, size, date, modified in [
+        ("a", "Zulu", 10, "2026-01-03T00:00:00+00:00", 1),
+        ("b", "alpha", 30, "2026-01-01T00:00:00+00:00", 3),
+        ("c", "Beta", 20, None, 1767312000),  # Jan 2; legacy receipt
+    ]:
+        directory = tool.output / ("export_" + identity * 32)
+        directory.mkdir()
+        receipt = {"artifact_id": directory.name, "plan": {"title": title}, "bytes": size}
+        if date:
+            receipt["created_at"] = date
+        path = directory / "receipt.json"
+        path.write_text(json.dumps(receipt))
+        os.utime(path, (modified, modified))
+
+    def titles(**kwargs):
+        return [r["plan"]["title"] for r in tool.saved_outputs(**kwargs)]
+
+    assert titles() == ["Zulu", "Beta", "alpha"]
+    assert titles(sort_by="oldest") == ["alpha", "Beta", "Zulu"]
+    assert titles(sort_by="name") == ["alpha", "Beta", "Zulu"]
+    assert titles(sort_by="size") == ["alpha", "Beta", "Zulu"]
+    assert "created_at" not in json.loads(path.read_text())
+    with pytest.raises(OuttakeError) as error:
+        tool.saved_outputs(sort_by="unknown")
+    assert error.value.code == "INVALID_SORT"
