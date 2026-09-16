@@ -34,12 +34,13 @@ scenario runs. Neither establishes human-approved cuts or complete conformance.
 ## Installation and prerequisites
 
 Install this checkout with `uv tool install .`, or use `uv sync` and `uv run outtake`.
-Once the code is published, git installation uses
+Without a checkout, git installation uses
 `uv tool install git+https://github.com/robotdad/amplifier-smart-tool-outtake`.
 Python 3.12+ is required. Install FFmpeg including FFprobe from its official download
 page; rendering MP4 requires libx264 and AAC support. Deterministic operations
 need no model credentials. For smart finding install the `smart` extra (`uv sync
---extra smart` in a checkout, or `uv tool install ".[smart]"`). This pins Amplifier
+--extra smart` in a checkout, or `uv tool install ".[smart]"`). For an agent-ready git installation use
+`uv tool install "outtake[smart] @ git+https://github.com/robotdad/amplifier-smart-tool-outtake"`. This pins Amplifier
 Agent v0.17.0; provider module revisions are pinned in `agent_runtime.py`. Initial
 Agent/provider preparation can download modules; no source media is part of setup.
 Only macOS has been exercised for this milestone.
