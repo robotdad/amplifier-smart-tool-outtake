@@ -174,3 +174,12 @@ expected pixels and audio; real scene trials remain separate.
   and [protocol restrictions](https://ffmpeg.org/ffmpeg-protocols.html).
 - Possibly integration reviewed at revision
   [`1011cae68c0b0e5ef4254a89814a8be7251e5c4f`](https://github.com/robotdad/possibly/tree/1011cae68c0b0e5ef4254a89814a8be7251e5c4f).
+
+## Agreed next capabilities (not yet implemented)
+
+The draft contracts now require default caption cue import, multiple timed text
+cues, discoverable fonts, editable moment titles, explicit export deletion and
+mobile-oriented size choices. These are requirements, not current API support.
+Unified playback controls and relocating original-source context under Refine are
+also agreed UI follow-ups. The current live text draft is approximate; the exact
+render remains authoritative. Keep installed help truthful until capabilities ship.

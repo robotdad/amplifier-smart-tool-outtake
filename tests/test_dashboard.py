@@ -82,7 +82,11 @@ def test_browser_edit_preview_export_reopen(tool, fixture_video, tmp_path):
         )
         assert not tool.saved_outputs()
         page.locator("#overlay-text").fill("A new caption")
-        page.locator("#start").fill("1")
+        expect(page.locator("#live-overlay")).to_be_visible()
+        expect(page.locator("#live-overlay")).to_have_text("A new caption")
+        page.locator("#start-slider").evaluate(
+            "el => { el.value = 1; el.dispatchEvent(new Event('input')); }"
+        )
         page.locator("#settings-button").click()
         page.locator("#appearance").select_option("light")
         page.get_by_role("button", name="Save settings").click()
@@ -207,3 +211,75 @@ def test_read_only_status_and_cancel_while_work_runs(tool, monkeypatch):
                 break
             time.sleep(0.01)
         assert job["result"]["status"] == "cancelled"
+
+
+def test_browser_trim_selection_playback_and_export(tool, fixture_video):
+    plan = tool.plan(str(fixture_video), 0, 2)
+    tool.render(plan)
+    with tool.dashboard(plan_id=plan.id) as server, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={"width": 1366, "height": 900})
+        page.goto(server.url)
+        expect(page.locator("#status-text")).to_have_text(
+            "Ready to refine. Your earlier exports stay unchanged."
+        )
+        page.wait_for_function("() => document.querySelector('#video').readyState >= 2")
+        calls = []
+        page.on(
+            "request",
+            lambda request: calls.append(request.url) if "/api/call" in request.url else None,
+        )
+        page.locator('[data-format="gif"]').click()
+        page.locator("#play-selection").click()
+        page.wait_for_function("() => !document.querySelector('#video').paused")
+        page.locator("#video").evaluate("v => v.pause()")
+        assert not calls, "Trimming an available clip should not call the render API"
+        page.locator('[data-format="mp4"]').click()
+        seek = page.locator("#timeline-seek")
+        box = seek.bounding_box()
+        seek.click(position={"x": box["width"] * 0.75, "y": box["height"] / 2})
+        page.wait_for_function(
+            "() => Math.abs(document.querySelector('#video').currentTime - 1.5) < .03"
+        )
+        expect(page.locator("#playhead")).to_be_visible()
+        expect(seek).to_have_attribute("aria-valuenow", "1.50")
+        seek.press("ArrowLeft")
+        expect(seek).to_have_attribute("aria-valuenow", "1.49")
+        page.locator("#set-end").click()
+        expect(page.locator("#end")).to_have_value("1.49")
+        expect(page.locator("#start")).to_have_value("0")
+        for boundary, value in [("start", 0.5), ("end", 1.2)]:
+            page.locator(f"#{boundary}-slider").evaluate(
+                "(el, value) => { el.value = value; el.dispatchEvent(new Event('input')); }", value
+            )
+        expect(page.locator("#trim-summary")).to_contain_text("0.70s kept")
+        page.wait_for_function(
+            "() => Math.abs(document.querySelector('#video').currentTime - 1.2) < .05"
+        )
+        page.locator("#play-selection").click()
+        page.wait_for_function("() => !document.querySelector('#video').paused")
+        page.wait_for_function("() => document.querySelector('#video').paused")
+        assert abs(page.locator("#video").evaluate("v => v.currentTime") - 1.2) < 0.08
+        page.locator("#loop-selection").click()
+        expect(page.locator("#loop-selection")).to_have_attribute("aria-pressed", "true")
+        page.locator("#video").evaluate(
+            "v => { window.wraps = 0; let last = v.currentTime; v.addEventListener('timeupdate', () => { if (v.currentTime < last - .2) window.wraps++; last = v.currentTime; }); }"
+        )
+        page.locator("#play-selection").click()
+        page.wait_for_function("() => window.wraps >= 3")
+        assert not page.locator("#video").evaluate("v => v.paused")
+        seek.click(position={"x": box["width"] * 0.4, "y": box["height"] / 2})
+        page.wait_for_function("() => !document.querySelector('#video').paused")
+        page.locator("#video").evaluate("v => v.pause()")
+        page.locator("#expand-context").click()
+        expect(page.locator("#status-text")).to_have_text(
+            "More source context loaded. Your export selection is unchanged.", timeout=20000
+        )
+        expect(page.locator("#start")).to_have_value("0.50")
+        expect(page.locator("#end")).to_have_value("1.20")
+        expect(page.locator("#end-slider")).to_have_attribute("max", "3")
+        page.locator("#export-button").click()
+        expect(page.locator(".output-card")).to_have_count(2, timeout=20000)
+        cut = next(r for r in tool.saved_outputs() if r["plan"]["start"] == 0.5)
+        assert cut["plan"]["end"] == 1.2
+        browser.close()

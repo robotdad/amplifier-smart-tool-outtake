@@ -1,5 +1,12 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
+let mediaOverlay = null;
+const playbackCache = [];
+let clipStart = 0,
+  clipEnd = 0,
+  mediaStart = 0,
+  mediaEnd = 0,
+  playbackReady = false;
 let prefs,
   plan = null,
   finding = null,
@@ -125,14 +132,24 @@ function setFormat(value) {
 function edited() {
   if (!plan) return;
   dirty = true;
+  if (mediaOverlay) {
+    const clean = [...playbackCache, ...outputs].find(
+      (r) =>
+        r.plan.format === "mp4" &&
+        !r.plan.overlay &&
+        r.plan.source.sha256 === plan.source.sha256 &&
+        r.plan.start <= Number($("start").value) &&
+        r.plan.end >= Number($("end").value),
+    );
+    if (clean) showMedia(clean);
+  }
   if (!$("preview-label").hidden)
     $("preview-label").textContent =
       "Preview has earlier edits · preview to update";
   $("dirty-label").textContent = "Unsaved edits";
   $("duration-label").textContent =
     `${Math.max(0, Number($("end").value) - Number($("start").value)).toFixed(2)}s`;
-  $("start-slider").value = $("start").value;
-  $("end-slider").value = $("end").value;
+  updateTrim();
 }
 function fillPlan() {
   $("edit-controls").disabled = false;
@@ -146,12 +163,7 @@ function fillPlan() {
   $("start").value = plan.start;
   $("end").value = plan.end;
   $("frame").value = plan.frame;
-  ["start-slider", "end-slider"].forEach((id) => {
-    $(id).min = Math.max(0, plan.start - 15);
-    $(id).max = Math.min(plan.source.duration, plan.end + 15);
-  });
-  $("start-slider").value = plan.start;
-  $("end-slider").value = plan.end;
+  updateTrim();
   $("start").max = plan.source.duration;
   $("end").max = plan.source.duration;
   $("frame").max = plan.source.duration;
@@ -222,6 +234,15 @@ function showMedia(receipt) {
   $("empty-preview").hidden = true;
   $("video").pause();
   const video = receipt.plan.format === "mp4";
+  playbackReady = video;
+  mediaOverlay = receipt.plan.overlay;
+  if (
+    video &&
+    !playbackCache.some((r) => r.artifact_id === receipt.artifact_id)
+  )
+    playbackCache.push(receipt);
+  mediaStart = receipt.plan.start;
+  mediaEnd = receipt.plan.end;
   $("video").hidden = !video;
   $("image").hidden = video;
   const element = video ? $("video") : $("image");
@@ -272,6 +293,10 @@ function showEvidence(evidence) {
 }
 async function loadPlan(value, receipt = null, preserveFinding = false) {
   receipt ||= outputs.find((output) => output.plan.id === value.id) || null;
+  clipStart = value.start;
+  clipEnd = value.end;
+  playbackReady = false;
+  mediaOverlay = null;
   plan = value;
   fillPlan();
   view("workspace");
@@ -592,14 +617,226 @@ for (const id of [
   "audio",
 ])
   event(id, "input", edited);
-for (const [slider, input] of [
-  ["start-slider", "start"],
-  ["end-slider", "end"],
-])
-  event(slider, "input", () => {
-    $(input).value = $(slider).value;
-    edited();
+function updateTrim() {
+  if (!plan) return;
+  $("trim-controls").disabled = false;
+  const length = clipEnd - clipStart;
+  const start = Number($("start").value) - clipStart;
+  const end = Number($("end").value) - clipStart;
+  for (const id of ["start-slider", "end-slider"]) $(id).max = length;
+  $("start-slider").value = start;
+  $("end-slider").value = end;
+  $("trim-kept").style.left = `${(100 * start) / length}%`;
+  $("trim-kept").style.width = `${(100 * (end - start)) / length}%`;
+  $("trim-summary").textContent =
+    `${time(start)} – ${time(end)} · ${(end - start).toFixed(2)}s kept / ${time(length)}`;
+  $("cut-summary").textContent =
+    `Export selection: ${(end - start).toFixed(2)}s`;
+}
+function moveBoundary(which, sourceTime) {
+  const start = Number($("start").value),
+    end = Number($("end").value);
+  const value =
+    which === "start"
+      ? Math.max(clipStart, Math.min(sourceTime, end - 0.01))
+      : Math.min(clipEnd, Math.max(sourceTime, start + 0.01));
+  $(which).value = value.toFixed(2);
+  edited();
+  const video = $("video");
+  video.pause();
+  if (playbackReady && value >= mediaStart && value <= mediaEnd)
+    video.currentTime = Math.max(
+      0,
+      Math.min(value - mediaStart, video.duration - 0.04),
+    );
+  else status("Use Play selection to prepare video for these boundaries.");
+}
+for (const which of ["start", "end"]) {
+  event(`${which}-slider`, "input", () =>
+    moveBoundary(which, clipStart + Number($(`${which}-slider`).value)),
+  );
+  event(`set-${which}`, "click", () => {
+    if (!playbackReady)
+      return status("Use Play selection to prepare the video first.");
+    moveBoundary(which, mediaStart + $("video").currentTime);
   });
+}
+async function preparePlayback(start = clipStart, end = clipEnd) {
+  const cached = [...playbackCache, ...outputs].find(
+    (r) =>
+      r.plan.format === "mp4" &&
+      !r.plan.overlay &&
+      r.plan.source.sha256 === plan.source.sha256 &&
+      r.plan.start <= start &&
+      r.plan.end >= end,
+  );
+  if (cached) showMedia(cached);
+  else {
+    const review = await api("revise", {
+      plan,
+      changes: {
+        start,
+        end,
+        frame: start,
+        format: "mp4",
+        overlay: null,
+        audio: plan.source.has_audio ? "preserve" : "mute",
+      },
+    });
+    showMedia(await api("preview", { plan: review }));
+  }
+  $("video").muted = format === "gif" || !$("audio").checked;
+  await new Promise((resolve, reject) => {
+    const video = $("video");
+    if (video.readyState >= 2) return resolve();
+    video.addEventListener("loadeddata", resolve, { once: true });
+    video.addEventListener(
+      "error",
+      () => reject(new Error("Playback preview could not load.")),
+      { once: true },
+    );
+  });
+}
+event("play-selection", "click", async () => {
+  const start = Number($("start").value),
+    end = Number($("end").value);
+  if (!playbackReady || start < mediaStart || end > mediaEnd)
+    await preparePlayback();
+  $("video").muted = format === "gif" || !$("audio").checked;
+  $("video").currentTime = start - mediaStart;
+  await $("video").play();
+});
+event("expand-context", "click", async () => {
+  const start = Math.max(0, clipStart - 15),
+    end = Math.min(plan.source.duration, clipEnd + 15);
+  await preparePlayback(start, end);
+  clipStart = start;
+  clipEnd = end;
+  updateTrim();
+  status("More source context loaded. Your export selection is unchanged.");
+});
+event("video", "play", () => {
+  const video = $("video"),
+    start = Number($("start").value) - mediaStart,
+    end = Number($("end").value) - mediaStart;
+  if (video.currentTime < start || video.currentTime >= end)
+    video.currentTime = Math.max(0, start);
+});
+event("loop-selection", "click", () => {
+  const button = $("loop-selection");
+  button.setAttribute(
+    "aria-pressed",
+    String(button.getAttribute("aria-pressed") !== "true"),
+  );
+});
+function constrainPlayback() {
+  const video = $("video");
+  if (!playbackReady || (video.paused && !video.ended)) return;
+  const start = Number($("start").value) - mediaStart,
+    end = Number($("end").value) - mediaStart;
+  if (video.currentTime >= end || video.ended) {
+    if ($("loop-selection").getAttribute("aria-pressed") === "true") {
+      video.currentTime = Math.max(0, start);
+      video.play().catch(fail);
+    } else {
+      video.pause();
+      video.currentTime = Math.min(end, video.duration);
+    }
+  } else if (video.currentTime < start) video.currentTime = Math.max(0, start);
+}
+event("video", "timeupdate", constrainPlayback);
+event("video", "ended", constrainPlayback);
+function updatePlayhead() {
+  const visible = plan && playbackReady && !$("video").hidden;
+  $("playhead").hidden = !visible;
+  if (!visible) return;
+  const position = Math.max(
+    0,
+    Math.min(
+      clipEnd - clipStart,
+      mediaStart + $("video").currentTime - clipStart,
+    ),
+  );
+  $("playhead").style.left = `${(100 * position) / (clipEnd - clipStart)}%`;
+  $("playhead-time").textContent = `Playhead · ${time(position)}`;
+  $("timeline-seek").setAttribute("aria-valuemax", String(clipEnd - clipStart));
+  $("timeline-seek").setAttribute("aria-valuenow", position.toFixed(2));
+  $("timeline-seek").setAttribute("aria-valuetext", time(position));
+}
+async function seekTimeline(sourceTime) {
+  if (!plan || activeJob) return;
+  const resume = !$("video").paused && !$("video").ended;
+  $("video").pause();
+  if (!playbackReady || sourceTime < mediaStart || sourceTime >= mediaEnd)
+    await preparePlayback();
+  const video = $("video");
+  video.pause();
+  video.currentTime = Math.max(
+    0,
+    Math.min(sourceTime - mediaStart, video.duration - 0.001),
+  );
+  updatePlayhead();
+  if (resume) await video.play();
+}
+event("timeline-seek", "click", async (e) => {
+  const box = $("timeline-seek").getBoundingClientRect();
+  await seekTimeline(
+    clipStart +
+      Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)) *
+        (clipEnd - clipStart),
+  );
+});
+event("timeline-seek", "keydown", async (e) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+  e.preventDefault();
+  const current = playbackReady
+    ? mediaStart + $("video").currentTime
+    : clipStart;
+  const step = e.shiftKey ? 0.1 : 0.01;
+  const target =
+    e.key === "Home"
+      ? clipStart
+      : e.key === "End"
+        ? clipEnd
+        : current + (e.key === "ArrowLeft" ? -step : step);
+  await seekTimeline(Math.max(clipStart, Math.min(clipEnd, target)));
+});
+function updateLiveOverlay() {
+  const overlay = $("live-overlay"),
+    text = $("overlay-text").value;
+  overlay.hidden =
+    !plan || !text || Boolean(mediaOverlay) || !$("empty-preview").hidden;
+  if (overlay.hidden) return;
+  const screen = overlay.parentElement;
+  const scale = Math.min(
+    screen.clientWidth / plan.source.width,
+    screen.clientHeight / plan.source.height,
+  );
+  const width = plan.source.width * scale,
+    height = plan.source.height * scale;
+  const renderWidth =
+    $("profile").value === "share"
+      ? Math.min(1280, plan.source.width)
+      : plan.source.width;
+  const textScale = width / renderWidth;
+  overlay.textContent = text;
+  overlay.style.left = `${(screen.clientWidth - width) / 2 + Number($("text-x").value) * width}px`;
+  overlay.style.top = `${(screen.clientHeight - height) / 2 + Number($("text-y").value) * height}px`;
+  overlay.style.fontSize = `${Number($("text-size").value) * textScale}px`;
+  overlay.style.color = $("text-color").value;
+  overlay.style.webkitTextStroke = `${Number($("outline-width").value) * textScale}px ${$("outline-color").value}`;
+  overlay.style.textAlign = $("alignment").value;
+  overlay.style.transform = `translateX(${$("alignment").value === "center" ? -50 : $("alignment").value === "right" ? -100 : 0}%)`;
+  $("preview-label").textContent =
+    "Live text draft · Preview edits for final appearance";
+}
+function playbackTick() {
+  constrainPlayback();
+  updatePlayhead();
+  updateLiveOverlay();
+  requestAnimationFrame(playbackTick);
+}
+requestAnimationFrame(playbackTick);
 
 async function boot() {
   const params = new URLSearchParams(location.search),

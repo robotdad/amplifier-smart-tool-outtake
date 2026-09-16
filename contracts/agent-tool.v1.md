@@ -34,7 +34,7 @@ traceable artifact. Configuration and permissions belong to the caller.
 ## Core (the teeth)
 
 1. **Every domain capability is available through both library and CLI.** Required capabilities are moment finding, smart end-to-end making, scoped cataloging, plan validation, preview, rendering, manifest discovery, and headless selection/revision of cuts, ordering, frames, overlays, and output. One library owns behavior; adapters add no private domain logic.
-2. **Normal calls are headless and machine-readable.** Plans and results have versioned JSON schemas. CLI JSON goes to stdout, progress/warnings to stderr, and operational failures exit non-zero without interactive prompts. Concise `-h` and detailed `--help` document arguments, results, AI use, artifacts, and remedies; no UI server or browser session is required.
+2. **Normal calls are headless and machine-readable.** Plans and results have versioned JSON schemas. CLI JSON goes to stdout, progress/warnings to stderr, and operational failures exit non-zero without interactive prompts. Concise `-h` provides a human summary; top-level `--help` prints the library-owned Agent Skill in a `skill_content` envelope, including installed skill directory, repository, manifest guidance, generated capability listing and packaged resources. Per-capability `--help` documents arguments, results, AI use, artifacts, and remedies; no UI server or browser session is required.
 3. **Users configure source roots and output destinations.** Documented configuration and library/CLI inputs accept local folders or mounted shares without code edits. Per-invocation values override configured defaults within caller-approved roots; models and plans cannot expand permissions. Unreadable sources, unwritable destinations, and unauthorized overrides return actionable errors without silent fallback; developer trial paths are not prerequisites.
 4. **Smart retrieval uses knowledge, user guidance, and captions without a fixed hierarchy.** Outtake uses Amplifier Agent for its intelligence layer, owns its configured model dependency, and accepts the calling agent's knowledge and the user's contextual clues as first-class inputs, equally important to finding a moment as available captions. Any can identify a source or candidate range; captions are not a prerequisite for bounded source inspection or silent-moment retrieval. Inferred locations remain hypotheses until checked against source evidence. The model receives bounded evidence, not filesystem access; uncertain occurrences, conflicting clues, or boundaries remain explicit.
 5. **Missing captions are a limitation of caption operations, not of the request.** Silent moments and sources with no text captions remain eligible for knowledge- or guidance-led retrieval and permitted source inspection. A specifically requested caption-dependent operation without text captions returns `MISSING_TEXT_CAPTIONS`; generic finding does not fail for that reason alone. If available clues and permitted inspection cannot locate or verify a moment, return an actionable limitation or ambiguity, not an invented match. No implicit OCR, transcription, or upload fills the gap. An explicit known-source timestamp/range remains provider-free; caption and shot boundaries alone do not establish a complete scene.
@@ -48,6 +48,79 @@ traceable artifact. Configuration and permissions belong to the caller.
 13. **Untrusted inputs cannot escape approved roots or execute instructions.** Canonicalize and confine reads/writes, preserve originals unchanged, and use fixed executables with argument vectors, never a shell or caller-supplied FFmpeg filters. Treat captions, paths, model output, and browser requests as data. Cache/state/temp are outside the install tree; outputs go to caller-selected destinations.
 14. **The dashboard is an optional runtime adapter, not a capability gate.** The caller can complete finding, editing, and delivery without opening it. When opened for participation, it presents the current moment directly in a compact workspace with search, actual generated playback, trim/reorder, and per-clip appearance, using the same plans/configuration/validation. Rendering makes the new output available in the same saved-outputs collection used to return to previous requests and exports. Reopening restores the identified source, occurrence, edits, and output choices; subsequent changes preserve earlier exports. Settings expose source/output locations and Amplifier Agent provider/model configuration through the same public behavior, and the interface supports light, dark, and system appearance. Browser presentation and explicit server lifecycle are surface-specific; UI-only domain behavior is forbidden. Launch is explicit, loopback by default, with no automatic LAN exposure; registered artifact IDs replace arbitrary paths, and viewing existing artifacts requires no model credential.
 15. **The installed package truthfully describes its capabilities.** Git installation, one packaged `SMART_TOOL.md`, and root `smart-tool.json` provide documented library/CLI use, manifest location, CLI argv, and a real provider-free deterministic smoke capability. Required manifest fields are nonempty, package/manifest versions agree, prerequisites are documented, and platform claims match verified installations.
+
+## Refinement and delivery behavior
+
+These are agreed draft requirements, not claims of shipped support. All domain
+operations below belong to the library and CLI as well as the dashboard; concrete
+command names and schema layout remain open.
+
+- **Captions populate text by default.** When usable text captions are available,
+  creating a selected cut brings the overlapping captions into its editable text
+  track, enabled by default. An explicit caller/user opt-out is preserved across
+  revisions. Use an explicitly selected track/language or configured preference;
+  otherwise prefer a declared default track or the sole eligible track. Unresolved
+  track/language ambiguity is exposed for selection, never silently blended.
+  Missing or unsupported captions leave manual text available and report the
+  limitation without failing a generic cut. No implicit OCR or transcription.
+  Local caption import is deterministic and grants no provider disclosure.
+- **Text is a collection of timed cues.** Each cue has a stable identity, text,
+  start/end, enabled state, font and appearance, and manual or caption provenance.
+  Multiple cues, gaps and overlaps are supported, with explicit stacking order.
+  Visibility is start-inclusive/end-exclusive; a still includes only cues active
+  at its selected frame. The public time basis and source-to-clip mapping are
+  explicit. Trimming preserves cue identity, edits and source alignment, clips
+  visible intervals to the cut, and never duplicates or silently replaces edited
+  captions. Expanding inspection context alone does not change the cut or cues.
+  Caption origin retains track, language, offset and fingerprint. Refreshing or
+  replacing imported captions is an explicit revision with reported effects.
+- **Fonts are discoverable and reproducible.** Callers can list available fonts by
+  stable ID and choose them per cue. Plans and receipts record resolved font
+  identity; unavailable fonts produce an actionable error, not silent substitution.
+  A browser text draft is labeled approximate; rendered preview and export use the
+  same font, styling and timing behavior.
+- **One selection governs local review.** The dashboard has one play/pause control
+  for the selected interval, a loop toggle and a seekable playhead. Media elements
+  do not expose a competing playback toolbar. Seeking preserves playing/paused
+  state. Trim handles, kept region and playhead share coordinates. Reuse suitable
+  review media when available; show progress when preparation is necessary.
+  Refine exposes additional context as coming from the original source, preserving
+  the current cut. Browser playback controls are presentation; inspect, revise and
+  preview remain available headlessly.
+- **Exports have useful names.** Plans retain a short editable title based on the
+  requested moment, carried into saved outputs, receipts and download filenames.
+  An agent may propose it during authorized finding; deterministic calls accept a
+  supplied title or use a documented fallback without invoking a model. Names are
+  sanitized, collision-safe labels, never identities or caller-controlled paths.
+  Renaming does not overwrite another export or change its media content.
+- **Saved outputs can be deleted deliberately.** Library/CLI and dashboard can
+  delete an identified export's generated file and receipt within the output root.
+  Source media, retained plans and other exports remain intact. The result reports
+  what was removed, already absent, or failed; partial deletion is not success.
+  Listing and opening a deleted export reflect its absence. Dashboard wording
+  states that the generated file is removed; mere plan revision never deletes it.
+- **Sharing balances quality and size.** Offer common mobile-friendly and
+  higher-quality choices with discoverable dimensions, frame rate and encoding
+  policy, plus explicit supported overrides through the public interface. Report
+  resolved settings and actual byte size; distinguish estimates from actual size.
+  GIF remains silent; MP4 is an available sharing alternative. Size limits never
+  silently shorten a cut or lower requested quality; failure is actionable.
+
+### Additional acceptance cases
+
+- Import captions through both headless and dashboard paths: deterministic track
+  selection, explicit ambiguity, opt-out, missing captions, overlapping cues,
+  edited text, gaps, trim/expand and reopening preserve equivalent plans.
+- Decode frames before, at and after cue boundaries, including overlapping cues
+  and a selected still; compare resolved font/style and record missing-font errors.
+- Name two exports alike without overwriting either. Delete one by ID; its media
+  and receipt disappear while source, plan and the other export remain usable.
+  Exercise absent exports and interrupted/failed deletion without false success.
+- Render the same cut using sharing presets and report actual dimensions, frame
+  rate and bytes. Verify complete duration and no undeclared quality fallback.
+- Seek and loop a short selection using the single playback toolbar; verify handle
+  alignment, continued playback after seeking, and unchanged cut when more original
+  source context is requested. Label live text drafts distinctly from exact renders.
 
 ## Evidence available to the intelligence layer
 
@@ -129,6 +202,10 @@ count as passed. See implementation status for exact current checks and gaps.
 - Upstream Smart Tools revision, supported platforms, package runner, and exact smoke invocation must be pinned from verified implementation evidence before release.
 
 ## Changelog
+
+- **2026-09-16** — Agreed default caption import, timed text and font discovery,
+  unified playback, source context, export titles/deletion and sharing-size controls;
+  clarified library-owned skill-format CLI help. Implementation remains partial.
 
 - **2026-09-16** — Agreed user-owned sound review through local playback and cut adjustment for the initial version; automatic sound verification is deferred.
 

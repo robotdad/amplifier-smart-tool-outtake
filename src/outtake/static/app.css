@@ -401,7 +401,7 @@ h3 {
   align-items: center;
   justify-content: flex-end;
   gap: 9px;
-  margin-top: auto;
+  margin-top: 0;
   padding-top: 10px;
 }
 .viewer-actions > span {
@@ -789,4 +789,123 @@ dialog::backdrop {
   .moments {
     max-height: none;
   }
+}
+
+#trim-controls {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.trim-track {
+  position: relative;
+  height: 30px;
+  margin: 10px 10px;
+  background: var(--line);
+  border-radius: 5px;
+}
+#trim-kept {
+  position: absolute;
+  height: 100%;
+  background: #6389cf;
+  opacity: 0.65;
+}
+.trim-track input[type="range"] {
+  position: absolute;
+  inset: 0 auto auto -6px;
+  width: calc(100% + 12px);
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.trim-track input::-webkit-slider-thumb {
+  box-sizing: border-box;
+  appearance: none;
+  width: 12px;
+  height: 34px;
+  border-radius: 3px;
+  background: #f0c876;
+  border: 2px solid #252b36;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.trim-track input::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 12px;
+  height: 30px;
+  border-radius: 3px;
+  background: #f0c876;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.trim-track input:focus-visible {
+  outline: none;
+}
+.trim-track input:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid #84b8ff;
+}
+.trim-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.trim-actions button {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.trim-actions #loop-selection {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#loop-selection[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+#timeline-seek {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+}
+#timeline-seek:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 4px;
+}
+#playhead {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--text);
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 2px var(--surface);
+}
+#playhead span {
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 10px;
+  height: 8px;
+  background: var(--text);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+#live-overlay {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  white-space: pre;
+  font-family: Arial, sans-serif;
+  line-height: 1.2;
+  paint-order: stroke fill;
 }

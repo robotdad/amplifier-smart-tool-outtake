@@ -74,10 +74,80 @@
               hidden
             ></video
             ><img id="image" alt="Selected source frame" hidden />
+            <div id="live-overlay" hidden></div>
             <div id="preview-label" class="preview-label" hidden>
               Source evidence
             </div>
           </div>
+          <fieldset id="trim-controls" disabled>
+            <div class="section-label">
+              EXPORT SELECTION <span id="trim-summary"></span>
+            </div>
+            <div class="trim-track" id="trim-track">
+              <div id="trim-kept"></div>
+              <div
+                id="timeline-seek"
+                role="slider"
+                tabindex="0"
+                aria-label="Playhead"
+                aria-valuemin="0"
+                aria-valuemax="0"
+                aria-valuenow="0"
+              ></div>
+              <div id="playhead" hidden><span></span></div>
+              <input
+                id="start-slider"
+                aria-label="Trim start"
+                type="range"
+                min="0"
+                step="0.01"
+              />
+              <input
+                id="end-slider"
+                aria-label="Trim end"
+                type="range"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div class="trim-actions">
+              <button id="play-selection">▶ Play selection</button>
+              <button
+                id="loop-selection"
+                type="button"
+                aria-pressed="false"
+                title="Loop the selected range"
+              >
+                <svg
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4m14-1v3a2 2 0 0 1-2 2H3"
+                  />
+                </svg>
+                Loop
+              </button>
+              <button id="set-start">Set start here</button>
+              <button id="set-end">Set end here</button>
+              <button id="expand-context">Expand ±15s</button>
+            </div>
+            <div id="playhead-time" class="hint" aria-live="off">
+              Playhead · 0:00.00
+            </div>
+            <p id="trim-note" class="hint">
+              Click the timeline to seek. Arrow keys move 0.01s; Shift moves
+              0.1s. Highlighted time is kept. Dimmed time is discarded. Times
+              start at the beginning of this clip.
+            </p>
+          </fieldset>
           <div class="evidence-heading">
             <span class="eyebrow">SOURCE FRAMES</span
             ><span id="evidence-note" class="small muted"
@@ -110,22 +180,8 @@
               <div class="section-label">
                 THE CUT <span id="duration-label">—</span>
               </div>
-              <label class="number-label" for="start"
-                >In
-                <input id="start" type="number" min="0" step="0.01" /></label
-              ><input
-                id="start-slider"
-                aria-label="In point"
-                type="range"
-                step="0.01"
-              /><label class="number-label" for="end"
-                >Out <input id="end" type="number" min="0" step="0.01" /></label
-              ><input
-                id="end-slider"
-                aria-label="Out point"
-                type="range"
-                step="0.01"
-              /><label class="number-label" for="frame"
+              <input id="start" type="hidden" /><input id="end" type="hidden" />
+              <label class="number-label" for="frame"
                 >Still frame
                 <input id="frame" type="number" min="0" step="0.01"
               /></label>

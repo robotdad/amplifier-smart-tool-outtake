@@ -86,6 +86,21 @@ the chosen occurrence. Wrong: silently switch to another occurrence or edition.
    caller owned. No caller wake-up, browser launch, or background continuation is
    implied by the availability of a result.
 
+## Shared refinement and export metadata
+
+Callers can read and revise the same timed text cues, caption inclusion policy,
+font choices, moment title and output settings that the dashboard presents.
+Available captions populate enabled editable cues by default unless explicitly
+opted out; track ambiguity and unavailable caption support remain visible.
+Manual dialogue and caption-derived text share cue behavior while retaining their
+provenance. Choosing a font, importing local captions, naming explicitly, revising
+cues and deleting a specified export require no model or browser session.
+
+The calling agent may propose a short title from the person's request. Public
+results retain it alongside stable plan/export IDs and report actual output size.
+An export deletion is an explicit action on an identified result, preserving its
+source and reusable plan; it is never inferred from a refinement request.
+
 ## Conformance kit asserts
 
 Proposed assertions only: **Can't check** until implementation and independent
@@ -125,6 +140,9 @@ in [the agent-tool contract](agent-tool.v1.md).
   use, and how do clarification results map to public outcome schemas?
 
 ## Changelog
+
+- **2026-09-16** — Added shared timed text/default captions, fonts, moment titles,
+  output size and deliberate export deletion to caller continuity.
 
 - **2026-09-16** — First behavioral draft defining caller/tool ownership,
   known-title retrieval, reviewable evidence, and continuity without an API design.

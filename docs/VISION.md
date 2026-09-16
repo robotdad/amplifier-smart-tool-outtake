@@ -68,6 +68,13 @@ saved-outputs view, where people can inspect or download results and return to a
 prior request and its edits. Revisiting an export preserves it while allowing a
 new revision. History and newly produced results belong to this same collection.
 
+Available captions become editable timed text by default, and people can add their
+own dialogue or captions. Text can appear and disappear at different moments,
+with font and appearance choices shared by agents and the dashboard. Explicit
+choices to omit captions remain respected. Useful short names make saved moments
+recognizable, and people can delete generated outputs without affecting originals.
+Mobile-friendly sharing choices make size and quality understandable.
+
 Settings let people manage source folders or mounted shares, output destinations,
 and Outtake's Amplifier Agent configuration, including provider and model choices.
 The interface supports light, dark, and system appearance. These settings and the
