@@ -54,10 +54,23 @@ of the cut; a flying car passing a billboard needs its movement and context.
 The evidence and proposed boundaries must support what the person asked for.
 Visual evidence alone does not establish that a particular sound occurred.
 
-People choose their source folders or mounted shares and where outputs go.
-The optional dashboard provides compact Create → Refine → Results interaction,
-real playback, simple trim and reorder controls, appearance settings, and
-downloads. It is another way to use Outtake, not a separate source of truth.
+The usual workflow starts in conversation with the calling agent, which may
+find, refine, and deliver the result without opening a dashboard. When a person
+wants to participate, the agent can open the current moment in a compact
+workspace for finding and editing. That workspace also supports starting a new
+search, without requiring an agent-provided moment to pass through a setup wizard.
+
+The optional dashboard brings candidate moments, source previews, trim and frame
+controls, text appearance, and output choices together. Rendering leads to one
+saved-outputs view, where people can inspect or download results and return to a
+prior request and its edits. Revisiting an export preserves it while allowing a
+new revision. History and newly produced results belong to this same collection.
+
+Settings let people manage source folders or mounted shares, output destinations,
+and Outtake's Amplifier Agent configuration, including provider and model choices.
+The interface supports light, dark, and system appearance. These settings and the
+workspace use the same underlying behavior available to the calling agent; the
+dashboard is another way to participate, not a separate source of truth.
 
 The same edit plan—a versioned description of sources, cuts, order, appearance,
 and output—governs both agent and browser use. The artifact and its receipt
@@ -117,6 +130,9 @@ and cancellation are reported honestly rather than disguised as success.
   final output; when something cannot be done, they know why and what to try.
 
 ## Changelog
+
+- **2026-09-16** — Clarified optional workspace participation, unified saved
+  outputs, return-and-revise behavior, and appearance/folder/intelligence settings.
 
 - **2026-09-16** — Clarified everyday sharing, meme creation, and higher-quality
   editing uses for exports; specific output presets remain open.

@@ -13,9 +13,12 @@
 
 ## Current authorization boundary
 
-- Foundation documents only: no implementation, executable work items, worker
-  launches, or provider configuration/calls yet. Feed investigation findings
-  back into vision and behavioral contracts; do not freeze technical interfaces.
+- Product work remains at vision and behavioral-contract definition; no Outtake
+  implementation or executable work items yet. The steward has authorized Possibly
+  UI exploration, refinement, and prototype export using configured providers.
+  Keep those artifacts in `.work/` and feed agreed findings back into governing
+  documents without freezing technical interfaces. This does not authorize real
+  media disclosure or Outtake provider calls.
 - The steward has made a local media collection available for investigation.
   Keep its location and inventory outside repository content, preserve sources,
   and keep inspection relevant and bounded. Local access does not authorize
