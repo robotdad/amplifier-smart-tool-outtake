@@ -13,12 +13,13 @@
 
 ## Current authorization boundary
 
-- Product work remains at vision and behavioral-contract definition; no Outtake
-  implementation or executable work items yet. The steward has authorized Possibly
-  UI exploration, refinement, and prototype export using configured providers.
-  Keep those artifacts in `.work/` and feed agreed findings back into governing
-  documents without freezing technical interfaces. This does not authorize real
-  media disclosure or Outtake provider calls.
+- The steward has authorized implementation, starting with the Python library and
+  thin CLI, then Amplifier-powered finding and the reviewed dashboard. Preserve
+  the draft behavioral promises and report milestone scope honestly. The steward
+  has now authorized the dashboard and end-to-end scenario runs against the supplied
+  collection, using the configured vision provider with bounded request, metadata,
+  caption and sampled-frame disclosure. No raw video/audio or whole inventories
+  go to providers. Human confirmation of semantic cuts remains distinct from tests.
 - The steward has made a local media collection available for investigation.
   Keep its location and inventory outside repository content, preserve sources,
   and keep inspection relevant and bounded. Local access does not authorize
@@ -40,7 +41,9 @@
   behavior is agent-callable without browser state or a running UI server.
 - Read the upstream [Smart Tools specifications](https://github.com/microsoft/amplifier-smart-tools/tree/main/spec)
   and record the verified revision before implementing package conformance.
-  Python, FFmpeg/FFprobe, and SQLite are proposals, not verified prerequisites.
+  Python and FFmpeg/FFprobe are selected for the first implementation. Storage
+  remains an internal choice. Verified spec revision:
+  `0f89dd9263338918d9b27bb48670c688c3e9bac1`.
 - Treat paths, captions, model output, and browser inputs as untrusted data.
   Keep sources read-only and outputs confined; never let a model expand access.
 - Keep developer paths, credentials, private media, and library inventories out
@@ -53,10 +56,17 @@
 
 ## Verification and completion
 
-- No implementation or runnable conformance kit exists yet. Do not invent test
-  commands or report the document checks as product acceptance.
-- Once runnable checks exist, record their exact commands here. Derive them
-  from the approved rubric; define independent expected results before running.
+- The library, bounded finding integration, and dashboard have runnable checks
+  (install Chromium once with `uv run playwright install chromium`):
+  `uv run --extra smart pytest`,
+  `uv run ruff check src tests`, `uv run ruff format --check src tests`, and
+  `uv build`. Run the upstream package checks against an installed CLI using
+  `uv run <spec-checkout>/conformance/run.py <outtake-distribution-root>`.
+  For the cached real-Agent offline test set `OUTTAKE_TEST_CACHED_AMPLIFIER=1`
+  and deny network access. Scripted providers verify integration, not recognition.
+  These do not establish complete product acceptance. See `docs/IMPLEMENTATION.md`.
+- Derive new checks from the approved rubric and define independent expected
+  results before running them.
 - Verify a fresh installed copy, provider-free deterministic paths, public CLI
   use by an independent agent, decoded media, and applicable browser behavior.
   Unit tests and HTTP 200 responses alone do not establish these outcomes.

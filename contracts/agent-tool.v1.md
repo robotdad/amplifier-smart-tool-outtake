@@ -2,7 +2,9 @@
 
 **Who builds against this:** People using Outtake through external agents, scripts,
 library integrations, and the optional dashboard depend on the same public behavior.
-There is no reference implementation yet; the conformance kit below is a plan.
+The current implementation covers only part of this contract;
+the full conformance kit below remains an acceptance plan. See
+[implementation status](../docs/IMPLEMENTATION.md) for verified scope.
 The [calling-agent contract](caller-interaction.v1.md) defines context, ownership,
 source resolution, questions, and continuity across the public boundary.
 
@@ -68,8 +70,10 @@ specific runtime versions, providers, and capability compatibility are unverifie
   action, dialogue, or transition and the proposed beginning/end, with uncertainty
   visible. Caption matches and related images may locate candidates without proving
   the whole moment. A visual match does not prove a nonverbal sound. Where sound is
-  essential, disclose what audible evidence is available or return the specific
-  verification limitation; do not describe visual inference as listening.
+  essential, mark sound as unverified and provide local playback and deterministic
+  cut revision so the person can verify it and adjust boundaries. Automatic sound
+  verification is outside the initial scope; do not describe visual inference as
+  listening or block an otherwise usable proposed cut solely on that limitation.
 - **Separate observation from interpretation.** Source observations, supplied clues,
   model hypotheses, and human confirmation remain distinguishable in public
   provenance. The caller receives useful evidence and limitations, not a requirement
@@ -91,9 +95,10 @@ specific runtime versions, providers, and capability compatibility are unverifie
 ## Conformance kit asserts
 
 The following acceptance scenarios map to the stable clauses above.
-This is not an implemented test suite or a pass report. Runtime assertions
-currently **Can't check**: no implementation or harness exists. Expected results
-are fixed independently before execution; skipped rows never count as passed.
+This table is the full acceptance plan, not a pass report. The initial runtime
+checks exercise subsets of these promises; no full row is claimed passed here.
+Expected results are fixed independently before execution; skipped rows never
+count as passed. See implementation status for exact current checks and gaps.
 
 | Check / clauses | Observable assertion and independent oracle | False-positive risk |
 |---|---|---|
@@ -101,7 +106,7 @@ are fixed independently before execution; skipped rows never count as passed.
 | AT-02 / 1, 5, 7, 12 | With credentials absent and provider network denied, local-fixture manifest/catalog/validate/preview/render produce fresh valid artifacts; malformed fixtures fail with expected codes. Independent markers/hashes and receipts are the oracle. | Cached model results or pre-existing artifacts. |
 | AT-03 / 4 | The chosen real source/occurrence belongs to the human-approved expected set; anchors trace to caption text and offset. The steward confirms independently prepared reference windows and acceptable bounds, recorded by name/date. | Repeated dialogue, recaps, drift, or a traceable wrong occurrence. |
 | AT-03a / 4, 5, 6, 10 | A real silent moment is found without a quote, text captions, or supplied exact timecodes: test both a knowledge-led request and a user-guided request. Pass only if each selected source/occurrence and cut are in the independently human-approved expected set and provenance separates clues/inference from source observations. Repeat with a misleading clue: it must not yield an unsupported confident match. | Memorized timecodes, a different edit of the film, hidden caption dependence, supplied reference windows leaking into the search, or attractive but wrong imagery. |
-| AT-03b / 4, 5, 6; evidence obligations | Human-approved transition and moving-action examples are located without supplied timecodes; timestamped, ordered source observations support the event and proposed boundaries. Sound-dependent examples distinguish actual audible evidence from inference and report missing verification honestly. | Related stills mistaken for an event; gaps in sampling hidden; visual expression mistaken for heard audio. |
+| AT-03b / 4, 5, 6; evidence obligations | Human-approved transition and moving-action examples are located without supplied timecodes; timestamped, ordered source observations support the event and proposed boundaries. Sound-dependent examples mark sound unverified and offer local playback and cut revision for user verification; they never claim that visual inference is listening. | Related stills mistaken for an event; gaps in sampling hidden; visual expression mistaken for heard audio. |
 | AT-03c / 4, 12, 13; evidence obligations | Controlled observations and provider/audit records show bounded source-linked evidence reaches the intelligence layer, unsupported vision is explicit, and repeated internal requests cannot expand scope or reset caps. | Model-authored evidence, undeclared uploads, or a fresh budget per internal call. |
 | AT-04 / 4, 5, 10 | Fixed ambiguity fixtures return needs_selection. No-text/image-caption fixtures fail specifically caption-dependent operations with MISSING_TEXT_CAPTIONS, not generic finding solely for absent captions. Insufficient clues or prohibited inspection produce actionable limitations without unauthorized fallback; explicit timestamp rendering still succeeds. Fixture-specific expected outcomes are fixed before execution. | Weak matches pass as unique; blanket caption errors conceal an unimplemented path; hidden OCR/transcription. |
 | AT-05 / 7, 8, 9 | Visible frame IDs prove first-frame selection; decoded duration differs from the independent expected timeline by at most one output-frame interval. Audio markers stay within max(one output frame, 25 ms); container metadata handles encoder delay, not tolerance inflation. Profiles fix frame rate/scaling/HDR policy before execution. | Keyframe seeks, metadata-only checks, or declared padding conceal drift. |
@@ -118,12 +123,14 @@ are fixed independently before execution; skipped rows never count as passed.
 - A local collection has been made available for investigation. Each execution must use the applicable caller-approved source/output scope; its private location is not a product default or prerequisite. Broader cataloging is not implied.
 - Named provider/model/account, terms review, disclosure categories including candidate frames, and exact model/render budgets remain approval choices; none are authorized by this draft.
 - Concrete test requests, source editions/episodes, occurrences, and human-confirmed reference cuts/quality must be selected before acceptance runs; generated fixtures cannot establish those semantic outcomes.
-- Sound-dependent verification within the current no-raw-audio-disclosure policy remains unresolved. Vision support alone does not establish audio understanding; any policy change requires an explicit contract revision.
+- Initial sound review is user-owned: local playback and cut adjustments, with sound explicitly unverified by Outtake. Raw-audio provider disclosure remains prohibited. Automatic sound understanding is deferred.
 - The bounded source-inspection strategy for knowledge- and guidance-led candidates, including silent moments, needs implementation design and an approved test setup. The outcome is required; no particular search algorithm, whole-library scan, or new disclosure permission is implied.
 - Dashboard delivery remains in the proposed integrated scope and AT-10; optional at runtime does not waive its acceptance gate. Omitting it requires an explicit scope decision.
 - Upstream Smart Tools revision, supported platforms, package runner, and exact smoke invocation must be pinned from verified implementation evidence before release.
 
 ## Changelog
+
+- **2026-09-16** — Agreed user-owned sound review through local playback and cut adjustment for the initial version; automatic sound verification is deferred.
 
 - **2026-09-16** — Clarified workspace handoff, saved-output continuity, shared
   settings, and light/dark/system appearance from reviewed UI direction.

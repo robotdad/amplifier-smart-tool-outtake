@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Outtake · Moment workspace</title>
+    <link rel="stylesheet" href="/app.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/" aria-label="Outtake home"
+        ><span class="mark">▰</span> outtake<span class="dot">.</span></a
+      >
+      <nav aria-label="Main navigation">
+        <button id="workspace-tab" class="tab active">Workspace</button
+        ><button id="saved-tab" class="tab">
+          Saved Outputs <span id="saved-count">0</span>
+        </button>
+      </nav>
+      <div class="header-right">
+        <span class="local"><i></i> Local collection</span
+        ><button id="settings-button" class="quiet">Settings</button
+        ><button id="search-button">＋ Find a moment</button>
+      </div>
+    </header>
+    <div id="status" role="status" aria-live="polite">
+      <span id="status-text">Your collection. Your cut.</span
+      ><button id="cancel-button" hidden>Cancel operation</button>
+    </div>
+    <main>
+      <section id="workspace" class="workspace">
+        <aside class="moments">
+          <div class="section-heading">
+            <h2>Moments</h2>
+            <span id="moment-count" class="badge">0</span>
+          </div>
+          <div id="request-title" class="small muted">
+            Start with a memory, or open a plan from your agent.
+          </div>
+          <div id="moments-list" class="moment-list"></div>
+          <div class="aside-note">
+            A proposed cut is a starting point.<br />Review the moment and make
+            it yours.
+          </div>
+        </aside>
+        <section class="viewer">
+          <div class="viewer-heading">
+            <div>
+              <div class="eyebrow">MOMENT WORKSPACE</div>
+              <h1 id="source-title">A moment worth keeping.</h1>
+              <div id="source-detail" class="small muted">
+                Find, refine, and take it with you.
+              </div>
+            </div>
+            <span id="revision-label" class="badge" hidden></span>
+          </div>
+          <div class="screen">
+            <div id="empty-preview">
+              <span class="film-icon">▤</span>
+              <h2>From a memory to a moment</h2>
+              <p>
+                Describe a scene, open an agent’s selection,<br />or choose a
+                saved output to keep editing.
+              </p>
+              <button id="empty-search">Find a moment</button>
+            </div>
+            <video
+              id="video"
+              controls
+              playsinline
+              preload="metadata"
+              hidden
+            ></video
+            ><img id="image" alt="Selected source frame" hidden />
+            <div id="preview-label" class="preview-label" hidden>
+              Source evidence
+            </div>
+          </div>
+          <div class="evidence-heading">
+            <span class="eyebrow">SOURCE FRAMES</span
+            ><span id="evidence-note" class="small muted"
+              >Ordered observations · gaps remain unobserved</span
+            >
+          </div>
+          <div id="filmstrip" class="filmstrip"></div>
+          <div class="review-note">
+            <span>◉</span>
+            <p id="uncertainty">
+              Sound is yours to review. Play the clip and adjust its beginning
+              or end.
+            </p>
+          </div>
+          <div class="viewer-actions">
+            <span id="cut-summary" class="muted small">No selection yet</span
+            ><button id="preview-button" disabled>↻ Preview edits</button
+            ><button id="export-button" class="primary" disabled>
+              Export moment ↗
+            </button>
+          </div>
+        </section>
+        <aside class="editor">
+          <div class="section-heading">
+            <h2>Refine</h2>
+            <span class="small muted" id="dirty-label">Choose a moment</span>
+          </div>
+          <fieldset id="edit-controls" disabled>
+            <div class="control-group">
+              <div class="section-label">
+                THE CUT <span id="duration-label">—</span>
+              </div>
+              <label class="number-label" for="start"
+                >In
+                <input id="start" type="number" min="0" step="0.01" /></label
+              ><input
+                id="start-slider"
+                aria-label="In point"
+                type="range"
+                step="0.01"
+              /><label class="number-label" for="end"
+                >Out <input id="end" type="number" min="0" step="0.01" /></label
+              ><input
+                id="end-slider"
+                aria-label="Out point"
+                type="range"
+                step="0.01"
+              /><label class="number-label" for="frame"
+                >Still frame
+                <input id="frame" type="number" min="0" step="0.01"
+              /></label>
+              <p class="hint">
+                Times are source seconds. Click a frame below the player to
+                choose a still.
+              </p>
+            </div>
+            <div class="control-group">
+              <label for="overlay-text" class="section-label"
+                >TEXT OVERLAY</label
+              ><textarea
+                id="overlay-text"
+                rows="2"
+                placeholder="Add a caption or make it a meme"
+              ></textarea>
+              <div class="pair">
+                <label
+                  >Size
+                  <input
+                    id="text-size"
+                    type="number"
+                    min="8"
+                    max="256"
+                    value="32" /></label
+                ><label
+                  >Color <input id="text-color" type="color" value="#ffffff"
+                /></label>
+              </div>
+              <details>
+                <summary>Text appearance</summary>
+                <label
+                  >Alignment
+                  <select id="alignment">
+                    <option>left</option>
+                    <option selected>center</option>
+                    <option>right</option>
+                  </select></label
+                ><label
+                  >Horizontal position
+                  <input
+                    id="text-x"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.5" /></label
+                ><label
+                  >Vertical position
+                  <input
+                    id="text-y"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.85"
+                /></label>
+                <div class="pair">
+                  <label
+                    >Outline
+                    <input
+                      id="outline-width"
+                      type="number"
+                      min="0"
+                      max="12"
+                      value="2" /></label
+                  ><label
+                    >Color
+                    <input id="outline-color" type="color" value="#000000"
+                  /></label>
+                </div>
+                <p class="hint">
+                  Default font · review the rendered text for fit.
+                </p>
+              </details>
+            </div>
+            <div class="control-group">
+              <div class="section-label">OUTPUT</div>
+              <div id="format-buttons" class="segmented">
+                <button data-format="mp4" class="active">MP4</button
+                ><button data-format="gif">GIF</button
+                ><button data-format="png">Image</button>
+              </div>
+              <label
+                >Quality
+                <select id="profile">
+                  <option value="share">Easy sharing</option>
+                  <option value="editing">Higher quality · for editing</option>
+                </select></label
+              ><label class="check"
+                ><input id="audio" type="checkbox" checked /> Keep source
+                audio</label
+              >
+              <p id="format-note" class="hint">
+                MP4 · compatible video with optional audio.
+              </p>
+            </div>
+          </fieldset>
+        </aside>
+      </section>
+      <section id="saved" class="saved" hidden>
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">YOUR COLLECTION OF MOMENTS</div>
+            <h1>Saved Outputs</h1>
+            <p class="muted">
+              Every export, with its source and edits. Reopen one to make
+              something new.
+            </p>
+          </div>
+          <button id="saved-refresh">Refresh</button>
+        </div>
+        <div id="saved-grid" class="saved-grid"></div>
+      </section>
+    </main>
+    <dialog id="search-dialog">
+      <form id="search-form">
+        <div class="dialog-heading">
+          <h2>Find a moment</h2>
+          <button
+            type="button"
+            data-close="search-dialog"
+            aria-label="Close search"
+          >
+            ×
+          </button>
+        </div>
+        <label
+          >Film or show
+          <input
+            id="search-title"
+            required
+            placeholder="e.g. Repo Man" /></label
+        ><label
+          >What do you remember?
+          <textarea
+            id="search-description"
+            rows="3"
+            placeholder="The plate of shrimp conversation"
+          ></textarea>
+        </label>
+        <p class="hint">
+          You don’t need a timestamp. Your configured provider uses only the
+          evidence you allow in Settings.
+        </p>
+        <div class="dialog-actions">
+          <button type="button" id="browse-button">
+            Browse matching sources</button
+          ><button id="find-button" class="primary">Find the moment</button>
+        </div>
+        <div id="source-results"></div>
+      </form>
+    </dialog>
+    <dialog id="settings-dialog">
+      <form id="settings-form">
+        <div class="dialog-heading">
+          <h2>Settings</h2>
+          <button
+            type="button"
+            data-close="settings-dialog"
+            aria-label="Close settings"
+          >
+            ×
+          </button>
+        </div>
+        <div class="settings-grid">
+          <section>
+            <h3>Collection & exports</h3>
+            <label
+              >Source folders · one per line<textarea
+                id="source-roots"
+                rows="3"
+                required
+              ></textarea></label
+            ><label>Output folder<input id="output-root" required /></label
+            ><label
+              >Appearance<select id="appearance">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select></label
+            >
+          </section>
+          <section>
+            <h3>Amplifier Agent</h3>
+            <label
+              >Provider<select id="provider">
+                <option value="gemini">Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select></label
+            ><label
+              >Model<input
+                id="model"
+                placeholder="Choose a model available to your provider"
+            /></label>
+            <p id="credential-status" class="hint"></p>
+            <label class="check"
+              ><input id="allow-smart" type="checkbox" /> Allow requests and
+              source metadata</label
+            ><label class="check"
+              ><input id="allow-captions" type="checkbox" /> Allow relevant text
+              captions</label
+            ><label class="check"
+              ><input id="allow-frames" type="checkbox" /> Allow sampled frames
+              · vision model</label
+            >
+          </section>
+        </div>
+        <details>
+          <summary>Work limits</summary>
+          <div class="pair">
+            <label
+              >Time limit · seconds<input
+                id="time-budget"
+                type="number"
+                min="1"
+                max="3600" /></label
+            ><label
+              >Model calls<input
+                id="model-budget"
+                type="number"
+                min="1"
+                max="40" /></label
+            ><label
+              >Sampled frames<input
+                id="frame-budget"
+                type="number"
+                min="0"
+                max="200"
+            /></label>
+          </div>
+        </details>
+        <p class="hint">
+          Credentials come from your host environment. Raw video and audio stay
+          local.
+        </p>
+        <div class="dialog-actions">
+          <button class="primary">Save settings</button>
+        </div>
+      </form>
+    </dialog>
+    <div id="error" role="alert" hidden>
+      <span id="error-text"></span
+      ><button id="dismiss-error" aria-label="Dismiss error">×</button>
+    </div>
+  </body>
+</html>

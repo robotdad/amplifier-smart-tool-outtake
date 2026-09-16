@@ -1,0 +1,51 @@
+[project]
+name = "outtake"
+version = "0.1.0.dev0"
+description = "Library-first, local video extraction for agents."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.10,<3", "PyYAML>=6,<7", "Pillow>=11,<13"]
+
+[project.optional-dependencies]
+smart = [
+  "amplifier-agent @ git+https://github.com/microsoft/amplifier-agent@v0.17.0",
+  "openai>=1", "anthropic>=0.70", "google-genai>=1",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project.scripts]
+outtake = "outtake.cli:main"
+
+[project.urls]
+Repository = "https://github.com/robotdad/amplifier-smart-tool-outtake"
+
+[dependency-groups]
+dev = [
+    "playwright>=1.63.0",
+    "pytest>=8,<10",
+    "ruff>=0.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/outtake"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:amplifier_module"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

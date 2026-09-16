@@ -52,7 +52,9 @@ time, or a transition between shots. Finding a related image is not necessarily
 finding the event: the bone-to-spacecraft transition in *2001* needs both sides
 of the cut; a flying car passing a billboard needs its movement and context.
 The evidence and proposed boundaries must support what the person asked for.
-Visual evidence alone does not establish that a particular sound occurred.
+Visual evidence alone does not establish that a particular sound occurred. For
+the initial version, the person verifies sound through local playback and adjusts
+the cut; automatic sound verification is outside scope.
 
 The usual workflow starts in conversation with the calling agent, which may
 find, refine, and deliver the result without opening a dashboard. When a person
@@ -130,6 +132,8 @@ and cancellation are reported honestly rather than disguised as success.
   final output; when something cannot be done, they know why and what to try.
 
 ## Changelog
+
+- **2026-09-16** — Clarified that initial sound verification belongs to the person, using local playback and cut adjustments.
 
 - **2026-09-16** — Clarified optional workspace participation, unified saved
   outputs, return-and-revise behavior, and appearance/folder/intelligence settings.

@@ -2,7 +2,9 @@
 
 **Who builds against this:** Calling agent applications, library/CLI adapters,
 the optional dashboard, and people finding and refining moments through them.
-No implementation or runnable conformance kit exists yet.
+The current implementation covers only part of this contract;
+see [implementation status](../docs/IMPLEMENTATION.md). The bounded smart interaction and optional dashboard have runnable checks; complete
+conformance and human-confirmed scene acceptance remain unverified.
 
 ## What it looks like
 

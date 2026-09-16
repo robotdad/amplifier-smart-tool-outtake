@@ -1,0 +1,5 @@
+{
+  "manifest": "src/outtake/SMART_TOOL.md",
+  "cli_argv": ["outtake"],
+  "deterministic_smoke": ["manifest"]
+}
