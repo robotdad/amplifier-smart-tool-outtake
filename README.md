@@ -17,6 +17,8 @@ Real-model proposals still require review; see the implementation status for evi
 ```sh
 uv sync
 uv run outtake --help
+uv run outtake render --help  # Focused agent skill for one command
+uv run outtake render -h      # Concise flag reference
 uv run playwright install chromium
 uv run pytest
 uv run ruff check .

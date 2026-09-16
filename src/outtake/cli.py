@@ -9,6 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from .capabilities import OPERATIONS
+from .help import command_names
 from .lib import Outtake, manifest, schemas, skill
 from .models import OuttakeError
 
@@ -21,6 +22,9 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv == ["--help"]:
         print(skill())
+        return 0
+    if argv and argv[0] in command_names() and "--help" in argv[1:]:
+        print(skill(argv[0]))
         return 0
     parser = argparse.ArgumentParser(
         description="Outtake: local media library and bounded Amplifier finding."

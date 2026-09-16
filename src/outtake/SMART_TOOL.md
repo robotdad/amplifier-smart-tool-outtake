@@ -177,7 +177,10 @@ result = tool.delete_output(receipt["artifact_id"])
 ## CLI capabilities
 
 `-h` is a short summary; `--help` is this library-owned skill. Each capability
-accepts `--help`. For domain operations, supply `--settings settings.json` and
+has its own focused skill via `<command> --help`, including defaults, examples,
+results and recovery guidance; `<command> -h` remains terse CLI syntax. Library
+callers can use `skill("render")` (or any other command name) to read the same text
+without loading sources or starting a provider. For domain operations, supply `--settings settings.json` and
 `--input request.json` (or `--input -` for JSON on stdin). The library receives
 the parsed values rather than file references. Requests have these shapes:
 

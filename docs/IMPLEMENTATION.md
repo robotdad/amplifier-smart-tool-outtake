@@ -230,3 +230,19 @@ export persistence and independent manual text. A real DVD-subtitle source also
 produced original-caption and styled OCR exports that decoded completely. Its OCR
 exposed recognition mistakes, corrected in the editable revision after inspecting
 original pixels; this is not blanket OCR or human semantic acceptance.
+
+## Focused command help
+
+Every CLI command now returns a library-owned `skill_content` document for
+`--help`; `-h` remains concise syntax. `skill(command)` exposes the same content
+in-process. Command skills include purpose, typed input descriptions, defaults
+from the live library signatures, request examples, library equivalents, result
+and side-effect guidance, model-use disclosure and recovery notes. Metadata and
+dashboard commands are included in the generated top-level capability inventory.
+Help generation does not construct a media client or contact a provider.
+
+Verification: all 31 command skills matched their library output, resolved their
+packaged resource references and retained terse `-h` behavior. Four CLI tests
+passed from a fresh installed wheel without provider credentials, including a
+render example executed directly from the help text against synthetic media.
+All 16 upstream package checks, lint and formatting checks passed.

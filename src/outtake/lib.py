@@ -53,7 +53,13 @@ def manifest():
     return {**yaml.safe_load(frontmatter), "body": body.strip()}
 
 
-def skill():
+def skill(command=None):
+    if command is not None:
+        from .help import command_skill
+
+        return command_skill(command)
+    from .help import EXTRA_COMMANDS
+
     root = importlib.resources.files("outtake")
     return (
         f'<skill_content name="outtake">\nSkill directory: {root}\n'
@@ -62,7 +68,7 @@ def skill():
         + "\n## Available capabilities\n"
         + "\n".join(
             f"- `{name}` [{'model-backed' if name in {'find', 'make'} else 'deterministic'}] — {description} See `outtake {name} --help`."
-            for name, description in OPERATIONS.items()
+            for name, description in {**OPERATIONS, **EXTRA_COMMANDS}.items()
         )
         + "\n<skill_resources>\n<file>lib.py</file>\n"
         "<file>models.py</file>\n</skill_resources>\n</skill_content>"
