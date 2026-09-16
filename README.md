@@ -21,15 +21,14 @@ Give your coding agent this message, replacing the example with your own memory:
 
 > Use [Outtake](https://github.com/robotdad/amplifier-smart-tool-outtake) to find
 > the exchange in Silicon Valley where Gilfoyle explains why Son of Anton deleted
-> the code. Read its [agent skill](https://github.com/robotdad/amplifier-smart-tool-outtake/blob/main/src/outtake/SMART_TOOL.md)
-> for setup and usage. Help me configure my video and output folders, find the
+> the code. Install Outtake, then read `outtake --help` for its usage skill and
+> `outtake <command> --help` for each capability you need. Help me configure my
+> video and output folders, find the
 > whole exchange, and open it in the workspace so I can trim and export it.
 
 Your agent installs and runs Outtake, helps resolve the title or episode, and
 presents a proposed cut. You can ask for the finished output in conversation or
 participate in the dashboard. No repository checkout is needed to use the tool.
-Outtake follows the [Amplifier Smart Tools](https://github.com/microsoft/amplifier-smart-tools)
-conventions; its catalog listing is being added.
 
 ### Before your first moment
 
@@ -51,9 +50,17 @@ previews, exports, and caption handling work locally without a model.
 
 ### For the agent receiving this link
 
-Start with the [tool-owned agent skill](src/outtake/SMART_TOOL.md) for installation
-and caller authority. Read `outtake --help`, then `<command> --help` for the current
-capability-specific skill. `<command> -h` provides a short flag reference.
+Install the tool without cloning the repository:
+
+```sh
+uv tool install "outtake[smart] @ git+https://github.com/robotdad/amplifier-smart-tool-outtake"
+outtake --help
+```
+
+`outtake --help` is the tool-owned usage skill. Read it first, then
+`outtake <command> --help` for each capability’s skill, including request shapes,
+examples, results, and recovery guidance. `outtake <command> -h` provides a short
+flag reference.
 [`AGENTS.md`](AGENTS.md#using-the-tool-for-a-person) describes the caller workflow.
 
 ## What the loop looks like
@@ -100,7 +107,7 @@ and the contribution workflow.
 ## Go deeper
 
 - [Agent usage and development workflow](AGENTS.md)
-- [Library and CLI skill, installation, and provider setup](src/outtake/SMART_TOOL.md)
+- [Library and CLI reference, installation, and provider setup](src/outtake/SMART_TOOL.md)
 - [Vision](docs/VISION.md)
 - [Agent/tool contract](contracts/agent-tool.v1.md) and [caller interaction contract](contracts/caller-interaction.v1.md)
 - [Implementation and verification status](docs/IMPLEMENTATION.md)
