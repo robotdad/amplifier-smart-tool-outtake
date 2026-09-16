@@ -8,7 +8,10 @@ finding integration**: bounded source discovery, text-caption search, timestampe
 frame evidence, selectable proposed cuts, and headless find-to-export. All behavior
 lives in the library behind the thin JSON CLI and optional loopback dashboard.
 The workspace supports source review, cut/text controls, real previews, exports,
-saved-output reopening, shared settings, and light/dark/system appearance.
+saved-output reopening/deletion, shared settings, and light/dark/system appearance.
+Timed text cues import available captions by default and support manual dialogue,
+font selection and explicit on/off times. Named exports and Mobile presets are
+available through the same library and CLI used by the dashboard.
 Real-model proposals still require review; see the implementation status for evidence.
 
 ```sh
@@ -44,3 +47,9 @@ Open the returned session URL. Omit `--plan-id` to start empty, or use
 `--finding-id finding_...` to show candidates. `--saved-settings` explicitly reuses
 folder/limit preferences saved in that workspace. Ctrl-C closes the server.
 No browser or server is required for normal library/CLI calls.
+
+Source captions support editable text tracks and original-appearance DVD/PGS/DVB
+image tracks. Explicit local OCR (`convert-captions`) requires Tesseract and its
+language data on PATH; imported image captions work without it. OCR creates timed,
+review-labeled text for styling and preserves the original images. No provider is
+used for import or conversion.

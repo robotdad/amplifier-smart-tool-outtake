@@ -52,7 +52,27 @@ class Overlay(Value):
     x: float = Field(default=0.5, ge=0, le=1)
     y: float = Field(default=0.85, ge=0, le=1)
     alignment: Literal["left", "center", "right"] = "center"
-    font: Literal["pillow-default"] = "pillow-default"
+    font: str = Field(default="pillow-default", min_length=1, max_length=100)
+
+
+class TextCue(Overlay):
+    id: str = Field(pattern=r"^cue_[a-zA-Z0-9_-]{1,80}$")
+    start: Seconds
+    end: Seconds
+    enabled: bool = True
+    origin: Literal["manual", "caption"] = "manual"
+    evidence_id: str | None = None
+    extraction: Literal["source_text", "ocr"] = "source_text"
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    review_required: bool = False
+
+    @model_validator(mode="after")
+    def ordered(self):
+        if self.start >= self.end:
+            raise ValueError("Cue end must follow start.")
+        if self.origin == "caption" and not self.evidence_id:
+            raise ValueError("Caption cues require retained caption evidence.")
+        return self
 
 
 class Source(Value):
@@ -64,6 +84,7 @@ class Source(Value):
     height: int = Field(gt=0)
     has_audio: bool
     color_transfer: str
+    sample_aspect_ratio: str = "1:1"
 
 
 class Plan(Value):
@@ -76,9 +97,18 @@ class Plan(Value):
     end: Seconds
     frame: Seconds
     format: Literal["mp4", "gif", "png"] = "mp4"
-    profile: Literal["share", "editing"] = "share"
+    profile: Literal["mobile", "share", "editing"] = "share"
     audio: Literal["preserve", "mute"] = "preserve"
     overlay: Overlay | None = None
+    title: str = Field(default="", max_length=120)
+    cues: tuple[TextCue, ...] = Field(default=(), max_length=100)
+    captions_enabled: bool = True
+    caption_status: str = "not_imported"
+    caption_mode: Literal["editable", "original"] = "editable"
+    caption_evidence_id: str | None = None
+    warnings: tuple[str, ...] = ()
+    max_width: int | None = Field(default=None, ge=160, le=3840)
+    fps: int | None = Field(default=None, ge=1, le=60)
     provenance: Literal["caller_range", "model_proposal"] = "caller_range"
     evidence_ids: tuple[str, ...] = ()
     finding_id: str | None = None
@@ -94,6 +124,10 @@ class Plan(Value):
             raise ValueError("Still frame must be within [start, end).")
         if self.format != "mp4" and self.audio != "mute":
             raise ValueError("GIF and PNG require audio=mute.")
+        if len({cue.id for cue in self.cues}) != len(self.cues):
+            raise ValueError("Cue identities must be unique.")
+        if any(cue.end > self.source.duration for cue in self.cues):
+            raise ValueError("Cue timing must be within the source.")
         return self
 
 
@@ -123,6 +157,7 @@ class ModelGrant(Value):
 
 
 class CandidateInput(Value):
+    title: str = Field(default="", max_length=80)
     source_id: str
     start: Seconds
     end: Seconds

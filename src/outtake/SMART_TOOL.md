@@ -26,8 +26,7 @@ requires:
 adapter. Chain operations through library return values, not parsed CLI text.
 
 The current implementation handles single-source edits plus bounded Amplifier
-finding/making and an optional dashboard. Caption overlays and multi-clip assembly
-remain unimplemented. Do not claim human confirmation or automatic sound verification.
+finding/making and an optional dashboard. Timed caption/manual text, font discovery, titles, mobile presets and explicit export deletion are supported. Multi-clip assembly remains unimplemented. Do not claim human confirmation or automatic sound verification.
 The person reviews sound through local playback and revises the cut. The actual
 Amplifier session is covered by offline scripted-provider tests and bounded live
 scenario runs. Neither establishes human-approved cuts or complete conformance.
@@ -78,15 +77,102 @@ MP4 preserves the first audio stream unless muted. `share` uses up to 1280px wid
 and 30fps video; GIF uses 15fps. `editing` preserves source dimensions (rounded
 down to even pixels) and uses average source frame rate with H.264 CRF18 rather
 than share CRF23. It is a high-quality re-encode, not a lossless editing master.
-All media is SDR; HDR, rotated video and non-square pixels are rejected explicitly.
+All media is SDR; HDR and rotated video are rejected explicitly. Non-square pixels are normalized to square pixels using the source display aspect ratio.
 Supported local containers are MP4/MOV, Matroska/WebM, AVI and MPEG-TS.
 
-Custom text uses Pillow's bundled default font; text is never an FFmpeg filter or
+Custom text uses a discovered font ID (or Pillow's bundled default font); text is never an FFmpeg filter or
 shell expression. Size, hex colors, outline, normalized position and alignment
 are supported. Position is the text's horizontal anchor and top edge. Text is
-not auto-wrapped or auto-shrunk; review the preview for clipping. Additional fonts
-and burning source captions into output are not implemented yet. Caption search
-is available as a separate observation capability.
+not auto-wrapped or auto-shrunk; review the preview for clipping. Use `fonts` to discover installed font choices. Selected source captions populate timed editable cues by default when a usable unambiguous text track is available. OCR is explicit and local; no transcription is performed.
+
+
+### Original image captions and explicit OCR
+
+`caption_mode` is `original` or `editable`; `captions_enabled=false` turns source
+captions off without removing either representation or manual text. `revise` changes
+these choices without reimporting or replacing edited text. Original mode requires
+retained image caption evidence. Text-only tracks use editable cues.
+
+`import-captions` with an image track retains decoded transparent subtitle images,
+source-relative display times and import coverage in `caption_evidence_id`. It
+selects original mode and explicitly replaces old imported text, preserving manual
+cues. `caption-image` resolves one retained image by `{evidence_id, index}` for local
+inspection. A cut extended beyond image coverage needs another explicit import.
+
+`convert-captions` accepts `{plan, language?}` and returns a new editable plan using
+local Tesseract OCR. Install Tesseract and its language data on PATH to use this
+optional operation; original rendering needs no OCR installation. `language` is an
+installed Tesseract language ID such as `eng`; omitted language uses track metadata
+(with standard French/German aliases). Unknown/unavailable languages fail with
+installed choices, rather than silently using English. Conversion is bounded and
+cancellable and never calls a provider. It preserves source display timing and
+original image evidence, retains manual cues, and explicitly replaces imported
+text on repeat conversion. Each OCR cue has `extraction="ocr"`, `confidence` (0–1)
+and `review_required=true`. Review recognition errors even at high confidence.
+Words and punctuation may need correction. OCR is not scene or dialogue verification.
+
+## Timed text, captions, names and sharing
+
+`plan` accepts `title`, `cues`, `captions_enabled` (default true), `max_width`
+and `fps` in addition to the existing arguments. `revise` accepts those same fields.
+A cue extends Overlay with `id` (`cue_` plus letters/digits/underscores/hyphens),
+`start`, `end`, `enabled`, `origin` (`manual` or `caption`), and `evidence_id`.
+Times are source seconds, start inclusive and end exclusive. Cues retain timing
+and IDs across trims; rendering intersects them with the selected cut. List order
+is stacking order. PNG includes only cues visible at the resolved frame. Legacy
+`overlay` remains whole-cut text underneath timed cues.
+
+New plans and smart selections import intersecting captions by default: text tracks become editable cues; supported DVD/PGS/DVB image tracks retain original pixels and timing.
+A single eligible track or single declared default is chosen; ambiguity/missing
+captions is reported in `caption_status` and `warnings` without preventing manual
+editing. `captions_enabled=false` opts out without deleting retained cue edits.
+Use `caption-tracks` to list choices and `import-captions` to explicitly replace
+caption cues (manual cues remain). Import creates a new revision; it is not a
+merge and replaces edits to previously imported captions. Evidence retains language,
+track, offset and fingerprint; stale captions fail rendering. Trimming never
+reimports captions. After expanding a cut, explicitly import to add new captions.
+
+`fonts` returns the default plus a small set of familiar installed fonts. Nondefault
+IDs bind exact font bytes; unavailable/changed fonts fail rather than substitute.
+The browser live draft approximates typography; Preview edits uses the actual font.
+Font availability beyond macOS is unverified. `output-profiles` reports presets:
+mobile (480px, GIF 10fps / MP4 24fps), share (1280px, GIF 15fps / MP4 30fps),
+editing (source size/rate, GIF 15fps). Width never upscales; `max_width` (160..3840)
+and `fps` (1..60) explicitly override presets. Actual bytes/settings are in receipts;
+there is no guaranteed target file size or automatic quality reduction.
+
+`title` is editable display metadata and the sanitized export filename stem;
+unique export directories prevent collisions. Smart finding proposes a short title;
+explicit range plans fall back to the source basename without a model call.
+`delete-output` deletes only the identified generated file and receipt, preserving
+sources and plans. It reports already absent exports; unsafe paths or incomplete
+deletion fail explicitly. This operation is destructive to that generated export.
+
+Example library use (source must be within caller-approved roots):
+
+```python
+plan = tool.plan(
+    source,
+    10,
+    15,
+    title="Sushi without paying",
+    format="gif",
+    profile="mobile",
+    captions_enabled=False,
+    cues=[
+        {
+            "id": "cue_line",
+            "start": 11,
+            "end": 13,
+            "text": "Let's get sushi",
+            "font": "pillow-default",
+        }
+    ],
+)
+receipt = tool.render(plan)
+# Deliberate deletion of a generated output, not source media:
+result = tool.delete_output(receipt["artifact_id"])
+```
 
 ## CLI capabilities
 
@@ -95,6 +181,11 @@ accepts `--help`. For domain operations, supply `--settings settings.json` and
 `--input request.json` (or `--input -` for JSON on stdin). The library receives
 the parsed values rather than file references. Requests have these shapes:
 
+- `fonts`: `{}`; available font IDs and names, deterministic.
+- `output-profiles`: `{}`; output preset dimensions/frame rates, deterministic.
+- `caption-tracks`: `{"plan": ...}`; available text/image track IDs, kind, codec, languages and defaults.
+- `import-captions`: `{"plan": ..., "track": "sidecar", "offset": 0}`; a new revision replacing caption cues.
+- `delete-output`: `{"artifact_id": "export_..."}`; removal result, or explicit failure.
 - `catalog`: `{"title":"Repo Man","scope":"/media/Movies","limit":20,"scan_limit":5000}`. Matches filename/folder clues only; `partial` explicitly reports truncated or unreadable scope.
 - `source-details`: `{"source_id":"source_..."}`; fingerprint, duration and available caption tracks. Optional `"fingerprint_source":false` returns cheap metadata without a content hash, suitable for title/episode resolution; it is not source evidence. Actual frame/caption observations and plans still fingerprint content.
 - `observe`: `{"source_id":"source_...","times":[12.2,13.5,15]}`; 1..12 increasing sample times, retained image paths, resolved times and gaps. Local only.

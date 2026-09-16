@@ -104,6 +104,7 @@
                 step="0.01"
               />
             </div>
+            <div id="cue-track" aria-label="Timed text cues"></div>
             <div class="trim-actions">
               <button id="play-selection" aria-label="Play selected clip">
                 ▶ Play
@@ -131,6 +132,7 @@
                 </svg>
                 Loop
               </button>
+              <button id="add-cue" type="button">＋ Add text</button>
               <button id="set-start">Set start here</button>
               <button id="set-end">Set end here</button>
             </div>
@@ -150,6 +152,7 @@
             >
           </div>
           <div id="filmstrip" class="filmstrip"></div>
+
           <div class="review-note">
             <span>◉</span>
             <p id="uncertainty">
@@ -172,6 +175,12 @@
           </div>
           <fieldset id="edit-controls" disabled>
             <div class="control-group">
+              <label
+                >Moment name<input
+                  id="moment-title"
+                  maxlength="120"
+                  placeholder="A short name for this moment"
+              /></label>
               <div class="section-label">ORIGINAL SOURCE</div>
               <button id="expand-context" type="button">
                 Show more from original source
@@ -196,72 +205,150 @@
               </p>
             </div>
             <div class="control-group">
-              <label for="overlay-text" class="section-label"
-                >TEXT OVERLAY</label
-              ><textarea
-                id="overlay-text"
-                rows="2"
-                placeholder="Add a caption or make it a meme"
-              ></textarea>
-              <div class="pair">
+              <details id="captions-section">
+                <summary id="captions-summary">Source captions</summary>
                 <label
-                  >Size
-                  <input
-                    id="text-size"
-                    type="number"
-                    min="8"
-                    max="256"
-                    value="32" /></label
-                ><label
-                  >Color <input id="text-color" type="color" value="#ffffff"
-                /></label>
-              </div>
-              <details>
-                <summary>Text appearance</summary>
-                <label
-                  >Alignment
-                  <select id="alignment">
-                    <option>left</option>
-                    <option selected>center</option>
-                    <option>right</option>
-                  </select></label
-                ><label
-                  >Horizontal position
-                  <input
-                    id="text-x"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.5" /></label
-                ><label
-                  >Vertical position
-                  <input
-                    id="text-y"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.85"
-                /></label>
-                <div class="pair">
-                  <label
-                    >Outline
-                    <input
-                      id="outline-width"
-                      type="number"
-                      min="0"
-                      max="12"
-                      value="2" /></label
-                  ><label
-                    >Color
-                    <input id="outline-color" type="color" value="#000000"
-                  /></label>
+                  ><input type="checkbox" id="captions-enabled" /> Include
+                  source captions</label
+                >
+                <label>Appearance<select id="caption-mode">
+                  <option value="editable">Editable text</option>
+                  <option value="original">Original appearance</option>
+                </select></label>
+                <p id="caption-status" class="hint"></p>
+                <button id="convert-captions" type="button" hidden>Convert to editable text</button>
+                <div id="ocr-note" hidden>
+                  <label>OCR language (optional)<input id="ocr-language" placeholder="Track language; e.g. eng" /></label>
+                  <p class="hint">Local OCR preserves timing. Review the converted words for errors.</p>
                 </div>
-                <p class="hint">
-                  Default font · review the rendered text for fit.
-                </p>
+                <label
+                  >Track<select id="caption-track">
+                    <option value="">Default track</option>
+                  </select></label
+                >
+                <label
+                  >Offset in seconds<input
+                    id="caption-offset"
+                    type="number"
+                    value="0"
+                    step="0.01"
+                /></label>
+                <button id="import-captions" type="button">
+                  Import selected track
+                </button>
               </details>
+              <p id="text-empty" class="hint">
+                Select text on the timeline or add text at the playhead.
+              </p>
+              <div id="text-editor" hidden>
+                <select id="cue-select" aria-label="Text to edit" hidden>
+                  <option value="">Whole clip text</option>
+                </select>
+
+                <label for="overlay-text" class="section-label"
+                  >TEXT OVERLAY</label
+                ><textarea
+                  id="overlay-text"
+                  rows="2"
+                  placeholder="Add a caption or make it a meme"
+                ></textarea>
+                <p id="cue-review" class="hint" hidden></p>
+                <div id="cue-timing" hidden>
+                  <div class="pair">
+                    <label
+                      >On (clip seconds)<input
+                        id="cue-start"
+                        type="number"
+                        step="0.01" /></label
+                    ><label
+                      >Off (clip seconds)<input
+                        id="cue-end"
+                        type="number"
+                        step="0.01"
+                    /></label>
+                  </div>
+                  <label
+                    ><input id="cue-enabled" type="checkbox" checked /> Show
+                    cue</label
+                  >
+                  <button
+                    id="remove-cue"
+                    type="button"
+                    aria-label="Remove text cue"
+                    title="Remove text cue"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div class="trim-actions">
+                  <button id="cue-start-here" type="button">Start here</button
+                  ><button id="cue-end-here" type="button">End here</button>
+                </div>
+                <details id="text-appearance">
+                  <summary>Appearance</summary>
+                  <label>Font<select id="text-font"></select></label>
+                  <div class="pair">
+                    <label
+                      >Size
+                      <input
+                        id="text-size"
+                        type="number"
+                        min="8"
+                        max="256"
+                        value="32" /></label
+                    ><label
+                      >Color
+                      <input id="text-color" type="color" value="#ffffff"
+                    /></label>
+                  </div>
+
+                  <label
+                    >Alignment
+                    <select id="alignment">
+                      <option>left</option>
+                      <option selected>center</option>
+                      <option>right</option>
+                    </select></label
+                  ><label
+                    >Horizontal position
+                    <input
+                      id="text-x"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.5" /></label
+                  ><label
+                    >Vertical position
+                    <input
+                      id="text-y"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.85"
+                  /></label>
+                  <div class="pair">
+                    <label
+                      >Outline
+                      <input
+                        id="outline-width"
+                        type="number"
+                        min="0"
+                        max="12"
+                        value="2" /></label
+                    ><label
+                      >Color
+                      <input id="outline-color" type="color" value="#000000"
+                    /></label>
+                  </div>
+                  <p class="hint">
+                    Live text is approximate · Preview edits uses the selected
+                    font.
+                  </p>
+                </details>
+              </div>
             </div>
             <div class="control-group">
               <div class="section-label">OUTPUT</div>
@@ -273,13 +360,32 @@
               <label
                 >Quality
                 <select id="profile">
-                  <option value="share">Easy sharing</option>
+                  <option value="mobile">Mobile · 480px / GIF 10 fps</option>
+                  <option value="share">
+                    Easy sharing · 1280px / GIF 15 fps
+                  </option>
                   <option value="editing">Higher quality · for editing</option>
                 </select></label
               ><label class="check"
                 ><input id="audio" type="checkbox" checked /> Keep source
                 audio</label
               >
+              <details>
+                <summary>Output size overrides</summary>
+                <label
+                  >Maximum width (blank uses preset)<input
+                    id="max-width"
+                    type="number"
+                    min="160"
+                    max="3840" /></label
+                ><label
+                  >Frames per second (blank uses preset)<input
+                    id="output-fps"
+                    type="number"
+                    min="1"
+                    max="60"
+                /></label>
+              </details>
               <p id="format-note" class="hint">
                 MP4 · compatible video with optional audio.
               </p>

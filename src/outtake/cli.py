@@ -8,32 +8,9 @@ from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
+from .capabilities import OPERATIONS
 from .lib import Outtake, manifest, schemas, skill
 from .models import OuttakeError
-
-OPERATIONS = {
-    "preferences": "Read workspace settings, appearance, model grant and credential availability: {}.",
-    "configure": "Save workspace settings: {settings, model_grant?, appearance?}.",
-    "review-frames": "Sample five local review frames for a plan: {plan}.",
-    "artifact": "Get a saved artifact by identity: {artifact_id}.",
-    "catalog": "Discover bounded source-name clues: {title?, scope?, limit?, scan_limit?}.",
-    "source-details": "Inspect a catalog source and caption availability: {source_id, fingerprint_source?}.",
-    "observe": "Extract timestamped local frame evidence: {source_id, times: [seconds,...]}.",
-    "captions": "Search existing text captions: {source_id, query, track?, offset?, limit?}.",
-    "get-evidence": "Load retained source observations: {evidence_id}.",
-    "find": "Amplifier moment finding: {request: <FindRequest>, grant: <ModelGrant>}.",
-    "get-finding": "Load a retained finding: {finding_id}.",
-    "select": "Choose a retained candidate: {finding_id, candidate_id, format?, profile?, overlay?}.",
-    "make": "Find and render a single candidate: {request, grant, format?, profile?}.",
-    "inspect": "Inspect and fingerprint one local source: {source}.",
-    "plan": "Create a retained plan: {source, start, end, format?, profile?, audio?, frame?, overlay?}.",
-    "get-plan": "Load a retained plan: {plan_id}.",
-    "revise": "Create a new revision: {plan: <plan object>, changes: {...}}.",
-    "validate": "Validate a plan and current source: {plan: <plan object>}.",
-    "preview": "Render the exact plan for local review: {plan: <plan object>}.",
-    "render": "Publish artifact and receipt: {plan: <plan object>}.",
-    "saved-outputs": "List published receipts from the configured output folder. Input: {}.",
-}
 
 
 def _read(path):

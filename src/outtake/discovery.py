@@ -295,13 +295,13 @@ def _seconds(value):
     return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
-def captions(client, source_id, query, track, offset, limit, budget):
+def captions(client, source_id, query, track, offset, limit, budget, interval=None):
     if (
         not isinstance(query, str)
-        or not 1 <= len(query) <= 500
+        or not (0 if interval else 1) <= len(query) <= 500
         or not math.isfinite(offset)
         or abs(offset) > 3600
-        or not 1 <= limit <= 100
+        or not 1 <= limit <= (101 if interval else 100)
     ):
         raise OuttakeError(
             "INVALID_INPUT",
@@ -384,6 +384,8 @@ def captions(client, source_id, query, track, offset, limit, budget):
         if query.casefold() in body.casefold():
             start = _seconds(match.group(1)) - caption_origin + offset
             end = _seconds(match.group(2)) - caption_origin + offset
+            if interval and (end <= interval[0] or start >= interval[1]):
+                continue
             if start < end and end > 0 and start < source.duration:
                 hits.append(
                     {"start": max(0, start), "end": min(end, source.duration), "text": body}
@@ -430,3 +432,19 @@ def validate_evidence(client, evidence, budget):
             raise OuttakeError(
                 "STALE_SOURCE", "Caption evidence has changed.", "Repeat caption inspection."
             )
+
+    if evidence["kind"] == "image_captions":
+        from .subtitles import image_path
+
+        for hit in evidence["hits"]:
+            image_path(client, evidence, hit, budget)
+    elif evidence["kind"] == "ocr_captions":
+        original = load_record(client, "evidence", evidence["image_evidence_id"])
+        if (
+            original["kind"] != "image_captions"
+            or original["source_sha256"] != evidence["source_sha256"]
+        ):
+            raise OuttakeError(
+                "INVALID_EVIDENCE", "OCR source evidence mismatch.", "Convert captions again."
+            )
+        validate_evidence(client, original, budget)

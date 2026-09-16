@@ -81,6 +81,7 @@ def test_browser_edit_preview_export_reopen(tool, fixture_video, tmp_path):
             "() => Math.abs(document.querySelector('#video').currentTime - 1.5) < .1"
         )
         assert not tool.saved_outputs()
+        page.locator("#add-cue").click()
         page.locator("#overlay-text").fill("A new caption")
         expect(page.locator("#live-overlay")).to_be_visible()
         expect(page.locator("#live-overlay")).to_have_text("A new caption")
@@ -103,9 +104,10 @@ def test_browser_edit_preview_export_reopen(tool, fixture_video, tmp_path):
         from pathlib import Path
 
         assert (tmp_path / "download.mp4").read_bytes() == Path(exports[0]["artifact"]).read_bytes()
-        page.get_by_role("button", name="Open in workspace").click()
+        page.get_by_role("button", name="Open", exact=True).click()
         expect(page.locator(".frame")).to_have_count(5)
         expect(page.locator("#start")).to_have_value("1")
+        page.locator(".cue-chip").first.click()
         expect(page.locator("#overlay-text")).to_have_value("A new caption")
         page.locator('[data-format="gif"]').click()
         page.locator("#export-button").click()
@@ -167,10 +169,11 @@ def test_browser_distinct_sources_and_system_appearance(tool, fixture_video, tmp
             card = page.locator(".output-card").filter(
                 has=page.get_by_text(f"“{text}”", exact=True)
             )
-            card.get_by_role("button", name="Open in workspace").click()
+            card.get_by_role("button", name="Open", exact=True).click()
+            page.locator(".cue-chip").first.click()
             expect(page.locator("#overlay-text")).to_have_value(text)
             expect(page.locator("#status-text")).to_have_text(
-                "Ready to refine. Your earlier exports stay unchanged."
+                "Ready to refine. Your earlier exports stay unchanged.", timeout=20000
             )
             expect(page.locator("#image")).to_have_attribute(
                 "src", "/media/export/" + receipt["artifact_id"]

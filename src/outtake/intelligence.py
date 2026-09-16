@@ -33,7 +33,7 @@ that precision belongs to deterministic editing and user review. Use broad-to-na
 sampling, check both ends once, and keep sampling gaps explicit. Reserve resources
 for final submission. A quoted line without text captions is unverified by visuals;
 propose its likely visual context with that limitation instead of claiming to hear it.
-Submit one or more candidates with explanations and explicit uncertainty. If you
+Submit one or more candidates with explanations, explicit uncertainty, and a short memorable title for the requested moment (not just the movie name). If you
 cannot find a supported candidate within scope, submit a limitation and focused
 next question. Absence in inspected samples is not absence from the whole source.
 End by calling submit_candidates or report_limitation; free text is not a result.
@@ -518,19 +518,24 @@ def select(client, finding_id, candidate_id, format, profile, overlay, budget=No
         profile=profile,
         audio="preserve" if format == "mp4" else "mute",
         overlay=overlay,
+        title=candidate.get("title")
+        or " ".join(result["request"]["description"].split()[:10])[:80],
         provenance="model_proposal",
         evidence_ids=tuple(candidate["evidence_ids"]),
         finding_id=finding_id,
         candidate_id=candidate_id,
     )
     client._check_duration(plan)
+    from .editing import import_captions
+
+    plan = import_captions(client, plan, budget=budget)
     return client._retain(plan)
 
 
 def make(client, request, grant, format, profile, cancelled):
     request = FindRequest.model_validate(request)
     # Validate output choices before starting paid work.
-    if format not in {"mp4", "gif", "png"} or profile not in {"share", "editing"}:
+    if format not in {"mp4", "gif", "png"} or profile not in {"mobile", "share", "editing"}:
         raise OuttakeError(
             "INVALID_INPUT", "Unsupported output choice.", "Choose mp4/gif/png and share/editing."
         )

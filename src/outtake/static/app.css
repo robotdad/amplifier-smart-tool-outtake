@@ -909,3 +909,83 @@ dialog::backdrop {
   line-height: 1.2;
   paint-order: stroke fill;
 }
+
+#live-overlay {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+#cue-track {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.cue-chip {
+  font-size: 11px;
+  padding: 6px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.cue-chip.active {
+  border-color: var(--accent);
+}
+#cue-select {
+  margin: 8px 0;
+}
+
+#cue-track {
+  position: relative;
+  display: block;
+  margin: 8px 10px;
+}
+.cue-chip {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 26px;
+  padding: 3px 5px;
+  min-width: 3px;
+  text-align: left;
+}
+.cue-chip.at-playhead {
+  background: var(--raised);
+  box-shadow: inset 0 -3px var(--teal);
+}
+.cue-chip.active {
+  outline: 1px solid var(--accent);
+}
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--raised);
+}
+.icon-action svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#captions-summary[aria-disabled="true"] {
+  color: var(--muted);
+  cursor: default;
+}
+#text-editor {
+  margin-top: 14px;
+}
+.busy .card-actions button,
+.busy .card-actions .icon-action {
+  pointer-events: none;
+  opacity: 0.55;
+}

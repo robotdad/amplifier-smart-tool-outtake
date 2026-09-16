@@ -1,6 +1,12 @@
+let captionEvidence = null, captionImages = [];
 "use strict";
 const $ = (id) => document.getElementById(id);
-let mediaOverlay = null;
+let mediaOverlay = null,
+  cleanPreparing = false;
+let cues = [],
+  activeCue = "",
+  wholeOverlay = {},
+  availableFonts = [];
 const playbackCache = [];
 let clipStart = 0,
   clipEnd = 0,
@@ -19,6 +25,7 @@ const time = (n) => {
   return `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
 };
 const label = (p) =>
+  p.title ||
   p.source.path
     .split(/[\\/]/)
     .pop()
@@ -37,6 +44,9 @@ const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function api(operation, args = {}) {
   const readOnly = [
+    "caption_tracks",
+    "fonts",
+    "output_profiles",
     "preferences",
     "get_plan",
     "get_finding",
@@ -137,11 +147,21 @@ function edited() {
       (r) =>
         r.plan.format === "mp4" &&
         !r.plan.overlay &&
+        !r.plan.cues?.length &&
+      !(r.plan.captions_enabled && r.plan.caption_mode === "original") &&
         r.plan.source.sha256 === plan.source.sha256 &&
         r.plan.start <= Number($("start").value) &&
         r.plan.end >= Number($("end").value),
     );
     if (clean) showMedia(clean);
+    else if (!cleanPreparing && !activeJob) {
+      cleanPreparing = true;
+      preparePlayback()
+        .catch(fail)
+        .finally(() => {
+          cleanPreparing = false;
+        });
+    }
   }
   if (!$("preview-label").hidden)
     $("preview-label").textContent =
@@ -167,7 +187,33 @@ function fillPlan() {
   $("start").max = plan.source.duration;
   $("end").max = plan.source.duration;
   $("frame").max = plan.source.duration;
-  const overlay = plan.overlay || {};
+  cues = structuredClone(plan.cues || []);
+  wholeOverlay = {};
+  if (plan.overlay?.text)
+    cues.unshift({
+      ...structuredClone(plan.overlay),
+      id: "cue_legacy",
+      start: plan.start,
+      end: plan.end,
+      enabled: true,
+      origin: "manual",
+      evidence_id: null,
+    });
+  activeCue = "";
+  $("moment-title").value = plan.title || label(plan);
+  $("captions-enabled").checked = plan.captions_enabled !== false;
+  $("caption-mode").value = plan.caption_mode || "editable";
+  $("caption-mode").querySelector('[value="original"]').disabled = !plan.caption_evidence_id;
+  $("caption-mode").querySelector('[value="editable"]').disabled = !!plan.caption_evidence_id && !cues.some(c => c.origin === "caption");
+  $("convert-captions").hidden = !plan.caption_evidence_id;
+  $("ocr-note").hidden = !plan.caption_evidence_id;
+  $("cue-review").hidden = true;
+  $("caption-status").textContent =
+    (plan.warnings || []).join(" ") ||
+    `Captions: ${plan.caption_status || "not imported"}`;
+  $("max-width").value = plan.max_width || "";
+  $("output-fps").value = plan.fps || "";
+  const overlay = {};
   $("overlay-text").value = overlay.text || "";
   $("text-size").value = overlay.size || 32;
   $("text-color").value = overlay.color || "#ffffff";
@@ -176,6 +222,8 @@ function fillPlan() {
   $("text-x").value = overlay.x ?? 0.5;
   $("text-y").value = overlay.y ?? 0.85;
   $("alignment").value = overlay.alignment || "center";
+  $("text-font").value = overlay.font || "pillow-default";
+  refreshCues();
   $("profile").value = plan.profile;
   $("audio").checked = plan.audio === "preserve";
   setFormat(plan.format);
@@ -202,19 +250,8 @@ async function saveEdits() {
     );
   let frame = Number($("frame").value);
   if (frame < start || frame >= end) frame = start;
-  const text = $("overlay-text").value;
-  const overlay = text
-    ? {
-        text,
-        size: Number($("text-size").value),
-        color: $("text-color").value,
-        outline_color: $("outline-color").value,
-        outline_width: Number($("outline-width").value),
-        x: Number($("text-x").value),
-        y: Number($("text-y").value),
-        alignment: $("alignment").value,
-      }
-    : null;
+  storeText();
+  const overlay = wholeOverlay.text ? wholeOverlay : null;
   plan = await api("revise", {
     plan,
     changes: {
@@ -225,6 +262,12 @@ async function saveEdits() {
       profile: $("profile").value,
       audio: format === "mp4" && $("audio").checked ? "preserve" : "mute",
       overlay,
+      cues,
+      title: $("moment-title").value,
+      captions_enabled: $("captions-enabled").checked,
+      caption_mode: $("caption-mode").value,
+      max_width: $("max-width").value ? Number($("max-width").value) : null,
+      fps: $("output-fps").value ? Number($("output-fps").value) : null,
     },
   });
   fillPlan();
@@ -235,7 +278,8 @@ function showMedia(receipt) {
   $("video").pause();
   const video = receipt.plan.format === "mp4";
   playbackReady = video;
-  mediaOverlay = receipt.plan.overlay;
+  mediaOverlay =
+    receipt.plan.overlay || (receipt.plan.cues?.length || (receipt.plan.captions_enabled && receipt.plan.caption_mode === "original") ? true : null);
   if (
     video &&
     !playbackCache.some((r) => r.artifact_id === receipt.artifact_id)
@@ -317,6 +361,27 @@ async function loadPlan(value, receipt = null, preserveFinding = false) {
   $("uncertainty").textContent =
     selected?.uncertainty ||
     "Sound is yours to review. Play the clip and adjust its beginning or end.";
+  const tracks = await api("caption_tracks", { plan });
+  $("caption-track").replaceChildren(
+    new Option("Default track", ""),
+    ...tracks.map(
+      (t) =>
+        new Option(
+          `${t.language} · ${t.kind} · ${t.id}${t.default ? " · default" : ""}`,
+          t.id,
+        ),
+    ),
+  );
+  const hasCaptions = tracks.length > 0;
+  $("captions-section").open = false;
+  $("captions-summary").textContent = hasCaptions
+    ? "Source captions"
+    : "Source captions · None available";
+  $("captions-summary").setAttribute("aria-disabled", String(!hasCaptions));
+  $("captions-enabled").disabled = !hasCaptions;
+  if (!hasCaptions) $("captions-enabled").checked = false;
+  $("import-captions").disabled = !hasCaptions;
+  await loadCaptionImages();
   if (receipt) showMedia(receipt);
   showEvidence(await api("review_frames", { plan }));
   status("Ready to refine. Your earlier exports stay unchanged.");
@@ -383,6 +448,35 @@ function showMoments() {
     $("moments-list").append(button);
   });
 }
+function actionIcon(element, name, path) {
+  element.classList.add("icon-action");
+  element.title = name;
+  element.setAttribute("aria-label", name);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  const shape = document.createElementNS(svg.namespaceURI, "path");
+  shape.setAttribute("d", path);
+  svg.append(shape);
+  element.append(svg);
+}
+event("captions-summary", "click", (e) => {
+  if ($("captions-summary").getAttribute("aria-disabled") === "true")
+    e.preventDefault();
+});
+for (const boundary of ["start", "end"])
+  event(`cue-${boundary}-here`, "click", () => {
+    const cue = cues.find((c) => c.id === activeCue);
+    if (!cue || !playbackReady) return;
+    const t = mediaStart + $("video").currentTime;
+    cue[boundary] =
+      boundary === "start"
+        ? Math.min(t, cue.end - 0.01)
+        : Math.max(t, cue.start + 0.01);
+    cue[boundary] = Math.max(0, Math.min(plan.source.duration, cue[boundary]));
+    chooseCue(activeCue);
+    edited();
+  });
 async function refreshSaved() {
   outputs = await api("saved_outputs");
   $("saved-count").textContent = outputs.length;
@@ -412,21 +506,47 @@ async function refreshSaved() {
     const detail = document.createElement("p");
     detail.textContent = `${receipt.plan.format.toUpperCase()} · ${time(receipt.plan.start)}–${time(receipt.plan.end)} · ${(receipt.bytes / 1024 / 1024).toFixed(1)} MB`;
     const edits = document.createElement("p");
-    edits.textContent = receipt.plan.overlay
-      ? `“${receipt.plan.overlay.text}”`
-      : "Original moment · no text overlay";
+    edits.textContent = receipt.plan.cues?.length
+      ? `${receipt.plan.cues.length} timed text cues`
+      : receipt.plan.overlay
+        ? `“${receipt.plan.overlay.text}”`
+        : "Original moment · no text overlay";
     const actions = document.createElement("div");
     actions.className = "card-actions";
     const open = document.createElement("button");
-    open.textContent = "Open in workspace";
+    open.textContent = "Open";
     open.addEventListener("click", () =>
       loadPlan(receipt.plan, receipt).catch(fail),
     );
     const download = document.createElement("a");
     download.href = `/media/export/${receipt.artifact_id}?download=1`;
-    download.textContent = "Download ↗";
+    actionIcon(download, "Download", "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5");
     download.download = `outtake.${receipt.plan.format}`;
-    actions.append(open, download);
+    const remove = document.createElement("button");
+    actionIcon(
+      remove,
+      "Delete",
+      "M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7",
+    );
+    remove.addEventListener("click", async () => {
+      if (
+        !confirm(
+          `Delete “${label(receipt.plan)}”? This removes its generated file and receipt. The source and plan remain.`,
+        )
+      )
+        return;
+      try {
+        await api("delete_output", { artifact_id: receipt.artifact_id });
+        for (let i = playbackCache.length - 1; i >= 0; i--)
+          if (playbackCache[i].artifact_id === receipt.artifact_id)
+            playbackCache.splice(i, 1);
+        await refreshSaved();
+        status("Export deleted. Source and plan preserved.");
+      } catch (error) {
+        fail(error);
+      }
+    });
+    actions.append(open, download, remove);
     body.append(title, detail, edits, actions);
     card.append(media, body);
     $("saved-grid").append(card);
@@ -598,6 +718,8 @@ document
 document.querySelectorAll("[data-format]").forEach((button) =>
   button.addEventListener("click", () => {
     setFormat(button.dataset.format);
+    if (button.dataset.format === "gif" && $("profile").value === "share")
+      $("profile").value = "mobile";
     edited();
   }),
 );
@@ -605,7 +727,16 @@ for (const id of [
   "start",
   "end",
   "frame",
+  "moment-title",
+  "captions-enabled",
+  "caption-mode",
+  "max-width",
+  "output-fps",
   "overlay-text",
+  "text-font",
+  "cue-start",
+  "cue-end",
+  "cue-enabled",
   "text-size",
   "text-color",
   "text-x",
@@ -616,7 +747,11 @@ for (const id of [
   "profile",
   "audio",
 ])
-  event(id, "input", edited);
+  event(id, "input", () => {
+    storeText();
+    refreshCues();
+    edited();
+  });
 function updateTrim() {
   if (!plan) return;
   $("trim-controls").disabled = false;
@@ -666,6 +801,8 @@ async function preparePlayback(start = clipStart, end = clipEnd) {
     (r) =>
       r.plan.format === "mp4" &&
       !r.plan.overlay &&
+      !r.plan.cues?.length &&
+      !(r.plan.captions_enabled && r.plan.caption_mode === "original") &&
       r.plan.source.sha256 === plan.source.sha256 &&
       r.plan.start <= start &&
       r.plan.end >= end,
@@ -680,6 +817,8 @@ async function preparePlayback(start = clipStart, end = clipEnd) {
         frame: start,
         format: "mp4",
         overlay: null,
+        cues: [],
+        captions_enabled: false,
         audio: plan.source.has_audio ? "preserve" : "mute",
       },
     });
@@ -786,6 +925,7 @@ async function seekTimeline(sourceTime) {
   );
   updatePlayhead();
   if (resume) await video.play();
+  status("Ready to refine. Your earlier exports stay unchanged.");
 }
 event("timeline-seek", "click", async (e) => {
   const box = $("timeline-seek").getBoundingClientRect();
@@ -810,34 +950,224 @@ event("timeline-seek", "keydown", async (e) => {
         : current + (e.key === "ArrowLeft" ? -step : step);
   await seekTimeline(Math.max(clipStart, Math.min(clipEnd, target)));
 });
+function textFields() {
+  return {
+    text: $("overlay-text").value,
+    font: $("text-font").value || "pillow-default",
+    size: Number($("text-size").value),
+    color: $("text-color").value,
+    outline_color: $("outline-color").value,
+    outline_width: Number($("outline-width").value),
+    x: Number($("text-x").value),
+    y: Number($("text-y").value),
+    alignment: $("alignment").value,
+  };
+}
+function storeText() {
+  const cue = cues.find((c) => c.id === activeCue);
+  if (cue)
+    Object.assign(cue, textFields(), {
+      start: clipStart + Number($("cue-start").value),
+      end: clipStart + Number($("cue-end").value),
+      enabled: $("cue-enabled").checked,
+    });
+}
+function chooseCue(id) {
+  activeCue = id;
+  const item = cues.find((c) => c.id === id) || wholeOverlay;
+  $("cue-timing").hidden = !id;
+  $("overlay-text").value = item.text || "";
+  $("text-font").value = item.font || "pillow-default";
+  $("text-size").value = item.size || 32;
+  $("text-color").value = item.color || "#ffffff";
+  $("outline-color").value = item.outline_color || "#000000";
+  $("outline-width").value = item.outline_width ?? 2;
+  $("text-x").value = item.x ?? 0.5;
+  $("text-y").value = item.y ?? 0.85;
+  $("alignment").value = item.alignment || "center";
+  if (id) {
+    $("cue-start").value = (item.start - clipStart).toFixed(2);
+    $("cue-end").value = (item.end - clipStart).toFixed(2);
+    $("cue-enabled").checked = item.enabled;
+  }
+  $("cue-review").hidden = item.extraction !== "ocr";
+  $("cue-review").textContent = item.extraction === "ocr" ? `OCR · Review words and punctuation${item.confidence != null ? ` · ${Math.round(item.confidence * 100)}% engine confidence` : ""}` : "";
+  refreshCues();
+}
+function refreshCues() {
+  $("cue-select").replaceChildren(new Option("Select text", ""));
+  $("cue-track").replaceChildren();
+  let row = 0;
+  const laneEnds = [];
+  for (const cue of cues) {
+    $("cue-select").add(
+      new Option(cue.text.slice(0, 45) || "New text", cue.id),
+    );
+    const button = document.createElement("button");
+    button.textContent = `${time(cue.start - clipStart)}–${time(cue.end - clipStart)} · ${cue.text || "New text"}`;
+    button.className = "cue-chip" + (activeCue === cue.id ? " active" : "");
+    button.dataset.cueId = cue.id;
+    button.title = button.textContent;
+    const left = Math.max(0, cue.start - clipStart),
+      right = Math.min(clipEnd - clipStart, cue.end - clipStart);
+    if (right <= left) continue;
+    let lane = laneEnds.findIndex((end) => end <= left);
+    if (lane < 0) lane = laneEnds.length;
+    laneEnds[lane] = right;
+    row = Math.max(row, lane + 1);
+    Object.assign(button.style, {
+      position: "absolute",
+      left: `${(100 * left) / (clipEnd - clipStart)}%`,
+      width: `${(100 * (right - left)) / (clipEnd - clipStart)}%`,
+      top: `${lane * 30}px`,
+    });
+    button.addEventListener("click", () => {
+      storeText();
+      chooseCue(cue.id);
+      seekTimeline(Math.max(clipStart, cue.start)).catch(fail);
+    });
+    $("cue-track").append(button);
+  }
+  $("cue-track").style.height = `${row * 30}px`;
+  $("text-editor").hidden = !activeCue;
+  $("text-empty").hidden = Boolean(activeCue);
+  $("cue-select").value = activeCue;
+  $("cue-timing").hidden = !activeCue;
+}
+event("cue-select", "change", () => {
+  const id = $("cue-select").value;
+  storeText();
+  chooseCue(id);
+});
+event("add-cue", "click", () => {
+  storeText();
+  const start = Math.max(
+    Number($("start").value),
+    Math.min(
+      playbackReady
+        ? mediaStart + $("video").currentTime
+        : Number($("start").value),
+      Number($("end").value) - 0.01,
+    ),
+  );
+  const id = "cue_" + crypto.randomUUID().replaceAll("-", "");
+  cues.push({
+    ...textFields(),
+    id,
+    text: "",
+    start,
+    end: Math.min(Number($("end").value), start + 2),
+    enabled: true,
+    origin: "manual",
+    evidence_id: null,
+  });
+  chooseCue(id);
+  edited();
+  $("overlay-text").focus();
+});
+event("remove-cue", "click", () => {
+  cues = cues.filter((c) => c.id !== activeCue);
+  chooseCue("");
+  edited();
+});
+event("import-captions", "click", async () => {
+  if (
+    cues.some((c) => c.origin === "caption") &&
+    !confirm(
+      "Replace imported caption cues? Manual cues remain; edits to imported cues will be replaced.",
+    )
+  )
+    return;
+  await saveEdits();
+  plan = await api("import_captions", {
+    plan,
+    track: $("caption-track").value || null,
+    offset: Number($("caption-offset").value),
+  });
+  await loadCaptionImages();
+  fillPlan();
+  status("Caption import updated. Review the selected appearance and any track warning.");
+});
+async function loadCaptionImages() {
+  captionEvidence = plan.caption_evidence_id ? await api("get_evidence", {evidence_id: plan.caption_evidence_id}) : null;
+  if (captionEvidence) $("caption-track").value = captionEvidence.track;
+  captionImages = (captionEvidence?.hits || []).map((hit, index) => {
+    const img = new Image();
+    img.src = `/media/subtitle/${captionEvidence.id}/${index}`;
+    img.alt = "Original source caption";
+    return img;
+  });
+}
+event("convert-captions", "click", async () => {
+  if (cues.some(c => c.origin === "caption") && !confirm("Replace converted caption text? Manual text and original images remain available.")) return;
+  await saveEdits();
+  status("Converting subtitle images locally. Review the recognized text when ready.");
+  plan = await api("convert_captions", {plan, language: $("ocr-language").value.trim() || null});
+  fillPlan();
+  status("Converted with local OCR. Review the words and punctuation; source timing is preserved.");
+});
 function updateLiveOverlay() {
-  const overlay = $("live-overlay"),
-    text = $("overlay-text").value;
-  overlay.hidden =
-    !plan || !text || Boolean(mediaOverlay) || !$("empty-preview").hidden;
-  if (overlay.hidden) return;
-  const screen = overlay.parentElement;
+  const layer = $("live-overlay");
+  layer.hidden = !plan || Boolean(mediaOverlay) || !$("empty-preview").hidden;
+  if (layer.hidden) return;
+  const position =
+    playbackReady && !$("video").hidden
+      ? mediaStart + $("video").currentTime
+      : Number($("frame").value);
+  const visible = [
+    wholeOverlay,
+    ...cues.filter(
+      (c) =>
+        c.enabled &&
+        (c.origin !== "caption" || ($("captions-enabled").checked && $("caption-mode").value === "editable")) &&
+        c.start <= position &&
+        position < c.end,
+    ),
+  ].filter((c) => c.text);
+  layer.replaceChildren();
+  const screen = layer.parentElement;
+  const sar = (plan.source.sample_aspect_ratio || "1:1").split(":").map(Number);
+  const sourceWidth = plan.source.width * (sar[0] > 0 && sar[1] > 0 ? sar[0] / sar[1] : 1);
   const scale = Math.min(
-    screen.clientWidth / plan.source.width,
+    screen.clientWidth / sourceWidth,
     screen.clientHeight / plan.source.height,
   );
-  const width = plan.source.width * scale,
+  const width = sourceWidth * scale,
     height = plan.source.height * scale;
-  const renderWidth =
-    $("profile").value === "share"
-      ? Math.min(1280, plan.source.width)
-      : plan.source.width;
-  const textScale = width / renderWidth;
-  overlay.textContent = text;
-  overlay.style.left = `${(screen.clientWidth - width) / 2 + Number($("text-x").value) * width}px`;
-  overlay.style.top = `${(screen.clientHeight - height) / 2 + Number($("text-y").value) * height}px`;
-  overlay.style.fontSize = `${Number($("text-size").value) * textScale}px`;
-  overlay.style.color = $("text-color").value;
-  overlay.style.webkitTextStroke = `${Number($("outline-width").value) * textScale}px ${$("outline-color").value}`;
-  overlay.style.textAlign = $("alignment").value;
-  overlay.style.transform = `translateX(${$("alignment").value === "center" ? -50 : $("alignment").value === "right" ? -100 : 0}%)`;
-  $("preview-label").textContent =
-    "Live text draft · Preview edits for final appearance";
+  const renderWidth = Math.min(
+    sourceWidth,
+    Number($("max-width").value) ||
+      { mobile: 480, share: 1280, editing: 8192 }[$("profile").value],
+  );
+  if ($("captions-enabled").checked && $("caption-mode").value === "original") {
+    (captionEvidence?.hits || []).forEach((hit, index) => {
+      if (hit.start <= position && position < hit.end) {
+        const img = captionImages[index];
+        Object.assign(img.style, {position: "absolute", width: `${width}px`, height: `${height}px`, left: `${(screen.clientWidth-width)/2}px`, top: `${(screen.clientHeight-height)/2}px`});
+        layer.append(img);
+      }
+    });
+  }
+  for (const cue of visible) {
+    const text = document.createElement("span");
+    text.textContent = cue.text;
+    Object.assign(text.style, {
+      position: "absolute",
+      left: `${(screen.clientWidth - width) / 2 + (cue.x ?? 0.5) * width}px`,
+      top: `${(screen.clientHeight - height) / 2 + (cue.y ?? 0.85) * height}px`,
+      fontSize: `${((cue.size || 32) * width) / renderWidth}px`,
+      color: cue.color || "#ffffff",
+      webkitTextStroke: `${((cue.outline_width ?? 2) * width) / renderWidth}px ${cue.outline_color || "#000000"}`,
+      textAlign: cue.alignment || "center",
+      transform: `translateX(${cue.alignment === "left" ? 0 : cue.alignment === "right" ? -100 : -50}%)`,
+      fontFamily:
+        availableFonts.find((f) => f.id === cue.font)?.name || "Arial",
+    });
+    layer.append(text);
+  }
+  if (visible.length)
+    $("preview-label").textContent =
+      "Live text draft · Preview edits for final appearance";
 }
 function updatePlaybackButton() {
   const playing = playbackReady && !$("video").paused && !$("video").ended;
@@ -853,6 +1183,16 @@ event("video", "ended", updatePlaybackButton);
 function playbackTick() {
   constrainPlayback();
   updatePlayhead();
+  const at = playbackReady
+    ? mediaStart + $("video").currentTime
+    : Number($("frame").value);
+  document.querySelectorAll(".cue-chip").forEach((button) => {
+    const cue = cues.find((c) => c.id === button.dataset.cueId);
+    button.classList.toggle(
+      "at-playhead",
+      Boolean(cue?.enabled && cue.start <= at && at < cue.end),
+    );
+  });
   updateLiveOverlay();
   requestAnimationFrame(playbackTick);
 }
@@ -870,6 +1210,10 @@ async function boot() {
     if (!response.ok) throw new Error("Could not open this workspace session.");
     history.replaceState(null, "", location.pathname + location.search);
   }
+  availableFonts = await api("fonts");
+  $("text-font").replaceChildren(
+    ...availableFonts.map((f) => new Option(f.name, f.id)),
+  );
   prefs = await api("preferences");
   document.documentElement.dataset.theme = prefs.appearance;
   await refreshSaved();

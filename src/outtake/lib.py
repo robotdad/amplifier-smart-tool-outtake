@@ -12,8 +12,9 @@ from functools import wraps
 from pathlib import Path
 
 import yaml
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
+from .capabilities import OPERATIONS
 from .media import INPUT_OPTIONS, Budget, fingerprint, frame_at, probe, run, video_stream
 from .models import (
     CandidateInput,
@@ -24,6 +25,7 @@ from .models import (
     Plan,
     Settings,
     Source,
+    TextCue,
 )
 
 _RENDER_LOCK = threading.Lock()
@@ -56,6 +58,11 @@ def skill():
         f'<skill_content name="outtake">\nSkill directory: {root}\n'
         "Repository: https://github.com/robotdad/amplifier-smart-tool-outtake\n\n"
         + manifest()["body"]
+        + "\n## Available capabilities\n"
+        + "\n".join(
+            f"- `{name}` [{'model-backed' if name in {'find', 'make'} else 'deterministic'}] — {description} See `outtake {name} --help`."
+            for name, description in OPERATIONS.items()
+        )
         + "\n<skill_resources>\n<file>lib.py</file>\n"
         "<file>models.py</file>\n</skill_resources>\n</skill_content>"
     )
@@ -63,6 +70,7 @@ def skill():
 
 def schemas():
     return {
+        "TextCue": TextCue.model_json_schema(),
         "schema_version": 1,
         "plan": Plan.model_json_schema(),
         "settings": Settings.model_json_schema(),
@@ -198,6 +206,7 @@ class Outtake:
             height=stream["height"],
             has_audio=any(s["codec_type"] == "audio" for s in info["streams"]),
             color_transfer=stream.get("color_transfer", "unspecified"),
+            sample_aspect_ratio=stream.get("sample_aspect_ratio", "1:1"),
         )
 
     @_io_errors
@@ -342,6 +351,11 @@ class Outtake:
         audio=None,
         frame=None,
         overlay=None,
+        title="",
+        cues=(),
+        captions_enabled=True,
+        max_width=None,
+        fps=None,
     ):
         """Create and retain a caller-range plan. Seconds are relative to first video PTS."""
         source_info = self.inspect(source)
@@ -355,9 +369,107 @@ class Outtake:
             profile=profile,
             audio=audio or ("preserve" if format == "mp4" else "mute"),
             overlay=overlay,
+            title=title or Path(source).stem[:120],
+            cues=cues,
+            captions_enabled=captions_enabled,
+            max_width=max_width,
+            fps=fps,
         )
         self._check_duration(plan)
+        if captions_enabled:
+            from .editing import import_captions
+
+            plan = import_captions(self, plan)
         return self._retain(plan)
+
+    def caption_tracks(self, plan):
+        plan = Plan.model_validate(plan)
+        path = self._source(plan.source.path)
+        info = probe(path, Budget(self.settings.limits))
+        from .subtitles import tracks
+
+        return tracks(path, info)
+
+    @_io_errors
+    def caption_image(self, evidence_id, index):
+        """Resolve one retained source subtitle image for local inspection."""
+        from .discovery import validate_evidence
+        from .subtitles import image_path
+
+        evidence = self.get_evidence(evidence_id)
+        if (
+            evidence["kind"] != "image_captions"
+            or not isinstance(index, int)
+            or not 0 <= index < len(evidence["hits"])
+        ):
+            raise OuttakeError(
+                "INVALID_EVIDENCE",
+                "Unknown subtitle image.",
+                "Use an image caption evidence ID and valid index.",
+            )
+        budget = Budget(self.settings.limits)
+        validate_evidence(self, evidence, budget)
+        hit = evidence["hits"][index]
+        return {**hit, "path": str(image_path(self, evidence, hit, budget))}
+
+    @staticmethod
+    def fonts():
+        from .editing import fonts
+
+        return fonts()
+
+    @staticmethod
+    def output_profiles():
+        return {
+            "mobile": {"max_width": 480, "gif_fps": 10, "mp4_fps": 24},
+            "share": {"max_width": 1280, "gif_fps": 15, "mp4_fps": 30},
+            "editing": {"max_width": 8192, "gif_fps": 15, "mp4_fps": "source"},
+        }
+
+    @_io_errors
+    def import_captions(self, plan, track=None, offset=0, cancelled=lambda: False):
+        from .editing import import_captions
+
+        base = Plan.model_validate(plan)
+        budget = Budget(self.settings.limits, cancelled)
+        self._check_identity(base)
+        source = self._inspect(base.source.path, budget)
+        if source.sha256 != base.source.sha256:
+            raise OuttakeError(
+                "STALE_SOURCE",
+                "Video source changed.",
+                "Create a new plan from the current source.",
+            )
+        result = import_captions(self, base, track, offset, budget)
+        result = result.model_copy(
+            update={"id": _id("plan"), "parent_id": base.id, "revision": base.revision + 1}
+        )
+        return self._retain(result)
+
+    @_io_errors
+    def convert_captions(self, plan, language=None, cancelled=lambda: False):
+        """Explicit local OCR; new revision, manual cues retained, OCR requires review."""
+        from .subtitles import convert
+
+        base = Plan.model_validate(plan)
+        budget = Budget(self.settings.limits, cancelled)
+        self._validate(base, budget)
+        result = convert(self, base, language, budget)
+        return self._retain(
+            result.model_copy(
+                update={
+                    "id": _id("plan"),
+                    "parent_id": base.id,
+                    "revision": base.revision + 1,
+                }
+            )
+        )
+
+    @_io_errors
+    def delete_output(self, artifact_id):
+        from .editing import delete_output
+
+        return delete_output(self, artifact_id)
 
     @_io_errors
     def get_plan(self, plan_id: str):
@@ -377,7 +489,21 @@ class Outtake:
         """Revise the explicitly supplied base, preserving source and prior revisions."""
         base = Plan.model_validate(plan)
         self._check_identity(base)
-        allowed = {"start", "end", "frame", "format", "profile", "audio", "overlay"}
+        allowed = {
+            "start",
+            "end",
+            "frame",
+            "format",
+            "profile",
+            "audio",
+            "overlay",
+            "title",
+            "cues",
+            "captions_enabled",
+            "caption_mode",
+            "max_width",
+            "fps",
+        }
         if set(changes) - allowed:
             raise OuttakeError(
                 "INVALID_REVISION",
@@ -427,6 +553,53 @@ class Outtake:
                         "Select the candidate again.",
                     )
                 validate_evidence(self, evidence, budget)
+        from .editing import load_font
+
+        for overlay in ([plan.overlay] if plan.overlay else []) + list(plan.cues):
+            load_font(overlay.font, overlay.size)
+        for cue in plan.cues:
+            if cue.evidence_id:
+                from .discovery import validate_evidence
+
+                evidence = self.get_evidence(cue.evidence_id)
+                if evidence["source_sha256"] != plan.source.sha256:
+                    raise OuttakeError(
+                        "INVALID_PLAN",
+                        "Cue evidence belongs to another source.",
+                        "Import captions again.",
+                    )
+                validate_evidence(self, evidence, budget)
+        if plan.caption_evidence_id:
+            from .discovery import validate_evidence
+
+            evidence = self.get_evidence(plan.caption_evidence_id)
+            if (
+                evidence["kind"] != "image_captions"
+                or evidence["source_sha256"] != plan.source.sha256
+            ):
+                raise OuttakeError(
+                    "INVALID_PLAN",
+                    "Image captions belong to another source or type.",
+                    "Import captions again.",
+                )
+            validate_evidence(self, evidence, budget)
+            coverage = evidence["coverage"]
+            if (
+                plan.captions_enabled
+                and plan.caption_mode == "original"
+                and (plan.start < coverage["start"] or plan.end > coverage["end"])
+            ):
+                raise OuttakeError(
+                    "CAPTION_COVERAGE",
+                    "Cut extends beyond imported image captions.",
+                    "Import the track again for the expanded cut.",
+                )
+        elif plan.captions_enabled and plan.caption_mode == "original":
+            raise OuttakeError(
+                "CAPTIONS_UNAVAILABLE",
+                "No original image captions are imported.",
+                "Import an image track or choose editable text.",
+            )
         self._check_duration(plan)
         path = self._source(plan.source.path)
         if (
@@ -509,14 +682,20 @@ class Outtake:
                 "EMPTY_CUT", "No selected frame exists before the end boundary.", "Extend the cut."
             )
         width, height = stream["width"], stream["height"]
+        from fractions import Fraction
+
         sar = stream.get("sample_aspect_ratio", "1:1")
-        if sar not in ("1:1", "N/A", "0:1"):
+        ratio = Fraction(sar.replace(":", "/")) if sar not in ("N/A", "0:1") else Fraction(1)
+        if not 0 < ratio <= 16:
             raise OuttakeError(
                 "ASPECT_UNSUPPORTED",
-                "Non-square source pixels are not yet supported.",
-                "Use a square-pixel source.",
+                "Invalid source pixel aspect ratio.",
+                "Inspect the source metadata.",
             )
-        scale = min(1, (1280 if plan.profile == "share" else 8192) / width)
+        width = round(width * ratio)
+        scale = min(
+            1, (plan.max_width or self.output_profiles()[plan.profile]["max_width"]) / width
+        )
         if width * height > 4096 * 2160:
             raise OuttakeError(
                 "RESOURCE_LIMIT",
@@ -524,10 +703,16 @@ class Outtake:
                 "Use a smaller source.",
             )
         width, height = max(2, int(width * scale) // 2 * 2), max(2, int(height * scale) // 2 * 2)
-        rate = (
-            "15"
-            if plan.format == "gif"
-            else ("30" if plan.profile == "share" else stream.get("avg_frame_rate", "0/0"))
+        profile = self.output_profiles()[plan.profile]
+        rate = str(
+            plan.fps
+            or (
+                profile["gif_fps"]
+                if plan.format == "gif"
+                else stream.get("avg_frame_rate", "0/0")
+                if profile["mp4_fps"] == "source"
+                else profile["mp4_fps"]
+            )
         )
         if rate == "0/0":
             raise OuttakeError(
@@ -537,7 +722,10 @@ class Outtake:
         destination = self.output / artifact_id
         with tempfile.TemporaryDirectory(prefix=".outtake-", dir=self.output) as scratch:
             stage = Path(scratch)
-            filename = f"artifact.{plan.format}"
+            from .editing import filename as export_filename
+            from .editing import load_font
+
+            filename = export_filename(plan.title, plan.format)
             artifact = stage / filename
             seek = max(0, first - float(info["format"].get("start_time", 0)) - 2)
             args = [
@@ -559,11 +747,53 @@ class Outtake:
             if plan.format != "png":
                 filters += f",fps={rate}:start_time=0"
             filters += "[base]"
-            if plan.overlay:
-                overlay = plan.overlay
+            label = "base"
+            if (
+                plan.captions_enabled
+                and plan.caption_mode == "original"
+                and plan.caption_evidence_id
+            ):
+                from .subtitles import image_path
+
+                evidence = self.get_evidence(plan.caption_evidence_id)
+                for index, hit in enumerate(evidence["hits"]):
+                    if hit["end"] <= plan.start or hit["start"] >= plan.end:
+                        continue
+                    if plan.format == "png" and not hit["start"] <= first - origin < hit["end"]:
+                        continue
+                    original = image_path(self, evidence, hit, budget)
+                    input_index = sum(1 for arg in args if arg == "-i")
+                    args += ["-i", str(original)]
+                    begin, finish = (
+                        max(0, hit["start"] - (first - origin)),
+                        hit["end"] - (first - origin),
+                    )
+                    enable = (
+                        ""
+                        if plan.format == "png"
+                        else f":enable='gte(t,{begin:.9f})*lt(t,{finish:.9f})'"
+                    )
+                    filters += f";[{input_index}:v]scale={width}:{height},setsar=1[sub{index}];[{label}][sub{index}]overlay=eof_action=repeat:format=auto{enable}[caption{index}]"
+                    label = f"caption{index}"
+            overlays = [(plan.overlay, plan.start, plan.end)] if plan.overlay else []
+            overlays += [
+                (cue, cue.start, cue.end)
+                for cue in plan.cues
+                if cue.enabled
+                and (
+                    cue.origin != "caption"
+                    or (plan.captions_enabled and plan.caption_mode == "editable")
+                )
+                and cue.end > plan.start
+                and cue.start < plan.end
+            ]
+            for index, (overlay, cue_start, cue_end) in enumerate(overlays):
+                if plan.format == "png" and not cue_start <= first - origin < cue_end:
+                    continue
+                budget.check()
                 image = Image.new("RGBA", (width, height))
                 draw = ImageDraw.Draw(image)
-                font = ImageFont.load_default(size=overlay.size)
+                font = load_font(overlay.font, overlay.size)
                 anchor = {"left": "la", "center": "ma", "right": "ra"}[overlay.alignment]
                 try:
                     draw.multiline_text(
@@ -578,14 +808,23 @@ class Outtake:
                     )
                 except (ValueError, UnicodeError) as exc:
                     raise OuttakeError(
-                        "OVERLAY_UNSUPPORTED", str(exc), "Use text supported by the bundled font."
+                        "OVERLAY_UNSUPPORTED", str(exc), "Choose another font or text."
                     ) from exc
-                image.save(stage / "overlay.png")
-                args += ["-i", str(stage / "overlay.png")]
-                filters += ";[base][1:v]overlay=eof_action=repeat:format=auto[text]"
-                label = "text"
-            else:
-                label = "base"
+                overlay_path = stage / f"overlay-{index}.png"
+                image.save(overlay_path)
+                image.close()
+                input_index = sum(1 for arg in args if arg == "-i")
+                args += ["-i", str(overlay_path)]
+                output_label = f"text{index}"
+                begin = max(0, cue_start - (first - origin))
+                finish = cue_end - (first - origin)
+                enable = (
+                    ""
+                    if plan.format == "png"
+                    else f":enable='gte(t,{begin:.9f})*lt(t,{finish:.9f})'"
+                )
+                filters += f";[{label}][{input_index}:v]overlay=eof_action=repeat:format=auto{enable}[{output_label}]"
+                label = output_label
             if plan.format == "gif":
                 filters += f";[{label}]split[palette_input][pixels];[palette_input]palettegen[palette];[pixels][palette]paletteuse[v]"
             else:
@@ -637,6 +876,8 @@ class Outtake:
                     "Output exceeds the configured size allowance.",
                     "Shorten the cut or increase max_output_bytes.",
                 )
+            for overlay_file in stage.glob("overlay-*.png"):
+                overlay_file.unlink()
             # Check again before publication, including source changes during encoding.
             self._validate(plan, budget)
             receipt = {
@@ -657,9 +898,10 @@ class Outtake:
                 "frame_rate": None if plan.format == "png" else rate,
                 "audio": "preserved" if with_audio else "none",
                 "tone_mapping": "none",
-                "warnings": [
-                    "Sound is unverified. Review local playback and revise boundaries as needed."
-                ],
+                "title": plan.title,
+                "fonts": sorted({o.font for o, _, _ in overlays}),
+                "warnings": list(plan.warnings)
+                + ["Sound is unverified. Review local playback and revise boundaries as needed."],
             }
             if plan.audio == "preserve" and not audio_streams:
                 receipt["warnings"].append("Source has no audio stream.")

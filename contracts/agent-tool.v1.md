@@ -55,7 +55,7 @@ These are agreed draft requirements, not claims of shipped support. All domain
 operations below belong to the library and CLI as well as the dashboard; concrete
 command names and schema layout remain open.
 
-- **Captions populate text by default.** When usable text captions are available,
+- **Source captions are included by default.** When usable text captions are available,
   creating a selected cut brings the overlapping captions into its editable text
   track, enabled by default. An explicit caller/user opt-out is preserved across
   revisions. Use an explicitly selected track/language or configured preference;
@@ -64,6 +64,19 @@ command names and schema layout remain open.
   Missing or unsupported captions leave manual text available and report the
   limitation without failing a generic cut. No implicit OCR or transcription.
   Local caption import is deterministic and grants no provider disclosure.
+  Supported image tracks use their original decoded appearance and source timing;
+  they do not need to become editable to be included. Off disables source captions
+  while preserving manual text. Original and editable modes are explicit retained
+  choices, shared by all interfaces; switching modes preserves existing edits.
+- **Image-to-text conversion is explicit.** A caller can request local OCR of an
+  imported image track to obtain independently styled timed text. Conversion keeps
+  the original image evidence, track/language/offset and cue timing, and records
+  OCR provenance, engine confidence and a review-required flag. Confidence is not
+  proof of correctness. No implicit OCR, transcription or provider disclosure is
+  permitted. Missing local OCR/language support is actionable and leaves original
+  captions usable. Re-conversion replaces imported text only by explicit request.
+  Import coverage is reported; expanding a cut beyond retained image coverage
+  requires refresh, rather than silently dropping captions.
 - **Text is a collection of timed cues.** Each cue has a stable identity, text,
   start/end, enabled state, font and appearance, and manual or caption provenance.
   Multiple cues, gaps and overlaps are supported, with explicit stacking order.

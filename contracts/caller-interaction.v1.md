@@ -90,8 +90,13 @@ the chosen occurrence. Wrong: silently switch to another occurrence or edition.
 
 Callers can read and revise the same timed text cues, caption inclusion policy,
 font choices, moment title and output settings that the dashboard presents.
-Available captions populate enabled editable cues by default unless explicitly
-opted out; track ambiguity and unavailable caption support remain visible.
+Available text captions populate enabled editable cues by default unless explicitly
+opted out; supported image captions retain their original appearance by default.
+Track ambiguity and unavailable caption support remain visible. Callers can choose
+original image captions, explicitly convert them locally to editable text, or turn
+source captions off while retaining manual text. OCR text is labeled for review;
+mode changes preserve edits and retained original image evidence. Conversion grants
+no permission to disclose subtitle images or text to a provider.
 Manual dialogue and caption-derived text share cue behavior while retaining their
 provenance. Choosing a font, importing local captions, naming explicitly, revising
 cues and deleting a specified export require no model or browser session.

@@ -145,14 +145,13 @@ integration passes.
 
 1. Human-confirmed real-scene acceptance and broader provider/model coverage.
    Vision in a grant is a caller declaration, not a completed per-model capability test.
-2. Caption overlays, multi-clip ordering, additional font families and complete
-   output policies. Natural-language refinement remains a new explicit find or
+2. Multi-clip ordering and broader output policies. Natural-language refinement remains a new explicit find or
    calling-agent interpretation followed by deterministic plan revision.
 3. Broader dashboard accessibility, large saved collections, and cross-browser coverage.
 4. Broader timing/codec coverage, including variable frame rate and audio offsets,
    concurrency across processes, and full schema/receipt compatibility guarantees.
 
-HDR, rotated media and non-square pixels are currently rejected. Editing output
+HDR and rotated media are currently rejected. Non-square pixels are normalized using the source display aspect ratio. Editing output
 is a high-quality H.264 re-encode, not a lossless master. An initial full-source hash can consume substantial time on large mounted files.
 A bounded process-local hash cache reuses unchanged file identities; accurate input
 seeking avoids decoding from the beginning for late-film renders and observations. Only macOS has been exercised.
@@ -175,11 +174,59 @@ expected pixels and audio; real scene trials remain separate.
 - Possibly integration reviewed at revision
   [`1011cae68c0b0e5ef4254a89814a8be7251e5c4f`](https://github.com/robotdad/possibly/tree/1011cae68c0b0e5ef4254a89814a8be7251e5c4f).
 
-## Agreed next capabilities (not yet implemented)
+## Refinement update
 
-The draft contracts now require default caption cue import, multiple timed text
-cues, discoverable fonts, editable moment titles, explicit export deletion and
-mobile-oriented size choices. These are requirements, not current API support.
-The dashboard now uses one selection play/pause control and places original-source
-context expansion under Refine. The current live text draft is approximate; the exact
-render remains authoritative. Keep installed help truthful until capabilities ship.
+Timed manual/caption cues, default text-caption import with explicit opt-out and
+track selection, installed-font discovery, editable titles, export deletion and
+mobile output presets now share library/CLI/dashboard behavior. Original whole-cut
+text remains compatible. Multiple cues use source-relative times and explicit
+stacking; immutable revisions preserve manual edits. Rendered previews use actual
+fonts; the live browser text draft remains approximate. Caption import replaces
+caption cues explicitly. Image subtitle import preserves original appearance; local OCR is an explicit separate operation. No transcription is performed.
+
+Mobile defaults are 480px, 10fps GIF / 24fps MP4, with public width/rate overrides.
+Receipts expose actual size; no target-size encoding promise is made. Discovered
+fonts depend on the host; only macOS has been exercised. The UI has one selection
+play/pause control and source-context expansion under Refine. Full contract
+conformance and human-confirmed semantic cuts remain separate acceptance work.
+
+Refinement verification: a fresh wheel passed 45 tests with network denied (including
+cached Amplifier integration), six Chromium dashboard tests, and all 16 upstream
+packaging checks. Decoded-frame checks cover timed text boundaries and stills;
+workflow checks cover cue/font/title persistence, Mobile export, Unicode download
+names and deletion preserving sources/plans. The final download-header and shared
+help-inventory changes were also checked against the installed wheel. A real
+4.05-second source cut produced a 24.9 MB sharing GIF and a 2.5 MB Mobile GIF;
+this comparison is measured, not a size guarantee for other clips.
+
+
+## Original subtitles and local OCR
+
+DVD/PGS/DVB image track import now retains decoded RGBA display images, timing,
+track/language/offset and source fingerprints. PyAV decodes subtitle events in a
+bounded, cancellable subprocess; FFmpeg extracts their pixels. Text tracks remain
+editable by default; unambiguous image tracks default to original appearance.
+Explicit Tesseract conversion creates review-labeled text cues while retaining the
+original evidence. Source-caption inclusion and appearance are shared plan fields;
+manual text remains independent. Expanded image-caption coverage requires refresh.
+No subtitle content leaves the machine during import or OCR.
+
+Original output preserves decoded subtitle appearance subject to output scaling.
+Converted text can be styled using existing cue controls. OCR confidence is an
+engine score, not a quality guarantee. Low-resolution lettering can confuse “I”
+with a vertical bar, and users must review wording/punctuation. Missing Tesseract or
+language data leaves original captions available. Only local English OCR has been
+exercised; DVB decoding and other OCR languages remain unverified on real media.
+
+
+Image-caption verification: a fresh wheel passed 48 provider-free tests with
+network access denied (including cached Agent integration), seven Chromium tests,
+and all 16 upstream package checks. Synthetic PGS events verified actual decoded
+pixels at start/end boundaries, captions crossing a trim boundary, offset handling,
+square-pixel output dimensions, stale evidence rejection and cancellation. Local
+OCR checks covered retained originals/manual edits, quoted TSV text and actionable
+missing-language/engine errors. Browser checks exercised conversion, mode switching,
+export persistence and independent manual text. A real DVD-subtitle source also
+produced original-caption and styled OCR exports that decoded completely. Its OCR
+exposed recognition mistakes, corrected in the editable revision after inspecting
+original pixels; this is not blanket OCR or human semantic acceptance.

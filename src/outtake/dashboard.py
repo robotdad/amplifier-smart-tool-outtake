@@ -11,13 +11,20 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 from pydantic import BaseModel, ValidationError
 
 from .models import OuttakeError
 
 OPERATIONS = {
+    "caption_tracks",
+    "caption_image",
+    "fonts",
+    "output_profiles",
+    "import_captions",
+    "convert_captions",
+    "delete_output",
     "catalog",
     "source_details",
     "observe",
@@ -40,8 +47,28 @@ OPERATIONS = {
     "review_frames",
     "artifact",
 }
-READ_ONLY = {"preferences", "get_plan", "get_finding", "get_evidence", "artifact", "saved_outputs"}
-CANCELLABLE = {"find", "make", "inspect", "preview", "render", "review_frames"}
+READ_ONLY = {
+    "caption_tracks",
+    "caption_image",
+    "fonts",
+    "output_profiles",
+    "preferences",
+    "get_plan",
+    "get_finding",
+    "get_evidence",
+    "artifact",
+    "saved_outputs",
+}
+CANCELLABLE = {
+    "import_captions",
+    "convert_captions",
+    "find",
+    "make",
+    "inspect",
+    "preview",
+    "render",
+    "review_frames",
+}
 
 
 def serializable(value):
@@ -168,6 +195,8 @@ class Dashboard:
                         if len(parts) == 4 and parts[2] == "export":
                             receipt = owner.client.artifact(parts[3])
                             path = Path(receipt["artifact"])
+                        elif len(parts) == 5 and parts[2] == "subtitle":
+                            path = Path(owner.client.caption_image(parts[3], int(parts[4]))["path"])
                         elif len(parts) == 5 and parts[2] == "frame":
                             evidence = owner.client.get_evidence(parts[3])
                             path = Path(evidence["frames"][int(parts[4])]["image"])
@@ -207,7 +236,9 @@ class Dashboard:
                 if status == 206:
                     self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
                 if download:
-                    self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+                    self.send_header(
+                        "Content-Disposition", f"attachment; filename*=UTF-8''{quote(path.name)}"
+                    )
                 self.end_headers()
                 try:
                     with path.open("rb") as file:
