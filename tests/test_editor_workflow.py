@@ -129,3 +129,45 @@ def test_browser_original_captions_convert_switch_and_manual_text(bitmap_tool, b
         assert image.ok and image.headers["content-type"] == "image/png"
         assert not errors
         browser.close()
+
+
+def test_play_waits_for_replacement_preview_and_trim_seek(tool, fixture_video, monkeypatch):
+    import threading
+
+    plan = tool.plan(
+        str(fixture_video), 0, 2.8, overlay={"text": "Caption"}, captions_enabled=False
+    )
+    tool.render(plan)
+    release = threading.Event()
+    started = threading.Event()
+    original = tool.preview
+
+    def delayed_preview(*args, **kwargs):
+        started.set()
+        assert release.wait(15), "Test never released preview generation"
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(tool, "preview", delayed_preview)
+    with tool.dashboard(plan_id=plan.id) as server, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        page.goto(server.url)
+        expect(page.locator("#status-text")).to_have_text(
+            "Ready to refine. Your earlier exports stay unchanged.", timeout=20000
+        )
+        page.locator("#start-slider").fill("0.83")
+        assert started.wait(5)
+        page.locator("#play-selection").click()
+        expect(page.locator("#play-selection")).to_have_text("Preparing…")
+        assert page.locator("#video").evaluate("v => v.paused")
+        release.set()
+        expect(page.locator("#play-selection")).to_have_text("Ⅱ Pause", timeout=20000)
+        page.wait_for_function("() => document.querySelector('#video').currentTime > 1.1", timeout=5000)
+        assert not page.locator("#video").evaluate("v => v.paused")
+        assert not page.locator("#error").is_visible()
+        page.locator("#play-selection").click()
+        page.locator("#start-slider").fill("1.37")
+        page.locator("#play-selection").click()
+        page.wait_for_function("() => document.querySelector('#video').currentTime > 1.6", timeout=5000)
+        assert not page.locator("#error").is_visible()
+        browser.close()

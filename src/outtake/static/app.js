@@ -3,6 +3,7 @@ let captionEvidence = null, captionImages = [];
 const $ = (id) => document.getElementById(id);
 let mediaOverlay = null,
   cleanPreparing = false;
+let playbackPreparation = null, playPending = false;
 let cues = [],
   activeCue = "",
   wholeOverlay = {},
@@ -143,24 +144,15 @@ function edited() {
   if (!plan) return;
   dirty = true;
   if (mediaOverlay) {
-    const clean = [...playbackCache, ...outputs].find(
-      (r) =>
-        r.plan.format === "mp4" &&
-        !r.plan.overlay &&
-        !r.plan.cues?.length &&
-      !(r.plan.captions_enabled && r.plan.caption_mode === "original") &&
-        r.plan.source.sha256 === plan.source.sha256 &&
-        r.plan.start <= Number($("start").value) &&
-        r.plan.end >= Number($("end").value),
-    );
-    if (clean) showMedia(clean);
-    else if (!cleanPreparing && !activeJob) {
+    if (!cleanPreparing && !activeJob) {
       cleanPreparing = true;
       preparePlayback()
+        .then(() => {
+          if ($("video").paused) $("video").currentTime = Math.max(0, Number($("start").value) - mediaStart);
+          status("Ready to play the selected clip.");
+        })
         .catch(fail)
-        .finally(() => {
-          cleanPreparing = false;
-        });
+        .finally(() => { cleanPreparing = false; });
     }
   }
   if (!$("preview-label").hidden)
@@ -798,6 +790,12 @@ for (const which of ["start", "end"]) {
   });
 }
 async function preparePlayback(start = clipStart, end = clipEnd) {
+  if (playbackPreparation) return playbackPreparation;
+  playbackPreparation = loadPlayback(start, end);
+  try { await playbackPreparation; }
+  finally { playbackPreparation = null; }
+}
+async function loadPlayback(start, end) {
   const cached = [...playbackCache, ...outputs].find(
     (r) =>
       r.plan.format === "mp4" &&
@@ -839,21 +837,30 @@ async function preparePlayback(start = clipStart, end = clipEnd) {
 }
 event("play-selection", "click", async () => {
   const video = $("video");
+  if (playPending) return;
   if (!video.paused && !video.ended) {
     video.pause();
     return;
   }
-  const start = Number($("start").value),
+  playPending = true;
+  updatePlaybackButton();
+  try {
+    if (playbackPreparation) await playbackPreparation;
+    let start = Number($("start").value), end = Number($("end").value);
+    if (!playbackReady || start < mediaStart || end > mediaEnd)
+      await preparePlayback();
+    start = Number($("start").value);
     end = Number($("end").value);
-  if (!playbackReady || start < mediaStart || end > mediaEnd)
-    await preparePlayback();
-  $("video").muted = format === "gif" || !$("audio").checked;
-  if (
-    video.currentTime < start - mediaStart ||
-    video.currentTime >= end - mediaStart
-  )
-    video.currentTime = start - mediaStart;
-  await video.play();
+    video.muted = format === "gif" || !$("audio").checked;
+    if (video.currentTime < start - mediaStart || video.currentTime >= end - mediaStart)
+      video.currentTime = Math.max(0, start - mediaStart);
+    await video.play();
+  } catch (error) {
+    if (error.name !== "AbortError") throw error;
+  } finally {
+    playPending = false;
+    updatePlaybackButton();
+  }
 });
 event("expand-context", "click", async () => {
   const start = Math.max(0, clipStart - 15),
@@ -880,7 +887,7 @@ event("loop-selection", "click", () => {
 });
 function constrainPlayback() {
   const video = $("video");
-  if (!playbackReady || (video.paused && !video.ended)) return;
+  if (!playbackReady || video.seeking || video.readyState < 2 || (video.paused && !video.ended)) return;
   const start = Number($("start").value) - mediaStart,
     end = Number($("end").value) - mediaStart;
   if (video.currentTime >= end || video.ended) {
@@ -891,7 +898,7 @@ function constrainPlayback() {
       video.pause();
       video.currentTime = Math.min(end, video.duration);
     }
-  } else if (video.currentTime < start) video.currentTime = Math.max(0, start);
+  } else if (video.currentTime < start - 0.002) video.currentTime = Math.max(0, start);
 }
 event("video", "timeupdate", constrainPlayback);
 event("video", "ended", constrainPlayback);
@@ -916,6 +923,7 @@ async function seekTimeline(sourceTime) {
   if (!plan || activeJob) return;
   const resume = !$("video").paused && !$("video").ended;
   $("video").pause();
+  if (playbackPreparation) await playbackPreparation;
   if (!playbackReady || sourceTime < mediaStart || sourceTime >= mediaEnd)
     await preparePlayback();
   const video = $("video");
@@ -1172,10 +1180,11 @@ function updateLiveOverlay() {
 }
 function updatePlaybackButton() {
   const playing = playbackReady && !$("video").paused && !$("video").ended;
-  $("play-selection").textContent = playing ? "Ⅱ Pause" : "▶ Play";
+  $("play-selection").textContent = playPending ? "Preparing…" : playing ? "Ⅱ Pause" : "▶ Play";
+  $("play-selection").disabled = playPending;
   $("play-selection").setAttribute(
     "aria-label",
-    playing ? "Pause selected clip" : "Play selected clip",
+    playPending ? "Preparing selected clip" : playing ? "Pause selected clip" : "Play selected clip",
   );
 }
 event("video", "play", updatePlaybackButton);
