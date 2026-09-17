@@ -106,6 +106,9 @@ results retain it alongside stable plan/export IDs and report actual output size
 An export deletion is an explicit action on an identified result, preserving its
 source and reusable plan; it is never inferred from a refinement request.
 
+Saved-output title changes are available to callers without rendering again.
+They preserve export identity and media, and do not apply unrelated draft edits.
+
 ## Conformance kit asserts
 
 Proposed assertions only: **Can't check** until implementation and independent

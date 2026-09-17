@@ -25,6 +25,7 @@ OPERATIONS = {
     "import_captions",
     "convert_captions",
     "delete_output",
+    "rename_output",
     "catalog",
     "source_details",
     "observe",
@@ -191,10 +192,16 @@ class Dashboard:
                     )
                 if parsed.path.startswith("/media/"):
                     try:
+                        download_name = None
                         parts = parsed.path.split("/")
                         if len(parts) == 4 and parts[2] == "export":
                             receipt = owner.client.artifact(parts[3])
                             path = Path(receipt["artifact"])
+                            from .editing import filename
+
+                            download_name = filename(
+                                receipt["plan"]["title"], receipt["plan"]["format"]
+                            )
                         elif len(parts) == 5 and parts[2] == "subtitle":
                             path = Path(owner.client.caption_image(parts[3], int(parts[4]))["path"])
                         elif len(parts) == 5 and parts[2] == "frame":
@@ -206,12 +213,12 @@ class Dashboard:
                                 raise ValueError("Invalid frame reference")
                         else:
                             raise ValueError("Invalid media reference")
-                        return self.media(path, "download" in parse_qs(parsed.query))
+                        return self.media(path, "download" in parse_qs(parsed.query), download_name)
                     except (OuttakeError, OSError, ValueError, IndexError, KeyError):
                         return self.respond({"error": "Media unavailable"}, 404)
                 return self.respond({"error": "Unknown route"}, 404)
 
-            def media(self, path, download):
+            def media(self, path, download, download_name=None):
                 size = path.stat().st_size
                 start, end, status = 0, size - 1, 200
                 requested = self.headers.get("Range")
@@ -237,7 +244,8 @@ class Dashboard:
                     self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
                 if download:
                     self.send_header(
-                        "Content-Disposition", f"attachment; filename*=UTF-8''{quote(path.name)}"
+                        "Content-Disposition",
+                        f"attachment; filename*=UTF-8''{quote(download_name or path.name)}",
                     )
                 self.end_headers()
                 try:

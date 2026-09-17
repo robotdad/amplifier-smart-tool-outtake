@@ -1,3 +1,4 @@
+let openedOutput = null;
 let captionEvidence = null, captionImages = [];
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -227,7 +228,7 @@ function fillPlan() {
   history.replaceState(null, "", `/?plan=${encodeURIComponent(plan.id)}`);
 }
 async function saveEdits() {
-  if (!dirty) return;
+  if (!dirty && $("moment-title").value === plan.title) return;
   const start = Number($("start").value),
     end = Number($("end").value);
   if (
@@ -329,6 +330,8 @@ function showEvidence(evidence) {
 }
 async function loadPlan(value, receipt = null, preserveFinding = false) {
   receipt ||= outputs.find((output) => output.plan.id === value.id) || null;
+  openedOutput = receipt;
+  $("save-output-name").hidden = !receipt || receipt.purpose === "preview";
   clipStart = value.start;
   clipEnd = value.end;
   playbackReady = false;
@@ -670,6 +673,8 @@ event("preview-button", "click", async () => {
 event("export-button", "click", async () => {
   await saveEdits();
   const receipt = await api("render", { plan });
+  openedOutput = receipt;
+  $("save-output-name").hidden = false;
   await refreshSaved();
   view("saved");
   status(
@@ -720,7 +725,6 @@ for (const id of [
   "start",
   "end",
   "frame",
-  "moment-title",
   "captions-enabled",
   "caption-mode",
   "max-width",
@@ -1237,3 +1241,24 @@ async function boot() {
   } else status("Your collection. Your cut.");
 }
 boot().catch(fail);
+
+
+event("moment-title", "input", () => {
+  $("dirty-label").textContent = dirty ? "Unsaved edits" : "Unsaved name";
+});
+event("save-output-name", "click", async () => {
+  if (!openedOutput) return;
+  const receipt = await api("rename_output", {
+    artifact_id: openedOutput.artifact_id, title: $("moment-title").value,
+  });
+  openedOutput = receipt;
+  if (!dirty) {
+    plan = receipt.plan;
+    history.replaceState(null, "", `/?plan=${encodeURIComponent(plan.id)}`);
+  }
+  $("moment-title").value = receipt.plan.title;
+  $("source-title").textContent = receipt.plan.title;
+  $("dirty-label").textContent = dirty ? "Unsaved edits" : "Name saved";
+  await refreshSaved();
+  status("Name saved. No new export needed.");
+});

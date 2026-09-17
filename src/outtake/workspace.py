@@ -96,3 +96,51 @@ def artifact(client, artifact_id):
             "Render the retained plan again.",
         )
     return result
+
+
+def rename_output(client, artifact_id, title):
+    """Update a saved name without reading sources or changing media bytes."""
+    import tempfile
+    import uuid
+    from datetime import datetime, timezone
+
+    from .models import Plan
+
+    receipt = artifact(client, artifact_id)
+    if not isinstance(title, str) or not title.strip() or len(title) > 120:
+        raise OuttakeError(
+            "INVALID_INPUT",
+            "Use a nonempty title of at most 120 characters.",
+            "Supply the new display name.",
+        )
+    title = title.strip()
+    if receipt["plan"].get("title") == title:
+        return receipt
+    base = Plan.model_validate(receipt["plan"])
+    revised = client._retain(
+        base.model_copy(
+            update={
+                "id": "plan_" + uuid.uuid4().hex,
+                "parent_id": base.id,
+                "revision": base.revision + 1,
+                "title": title,
+            }
+        )
+    )
+    path = client.output / artifact_id / "receipt.json"
+    receipt.setdefault(
+        "created_at", datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+    )
+    receipt["plan"] = revised.model_dump(mode="json")
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=path.parent, delete=False, encoding="utf-8"
+        ) as f:
+            temporary = Path(f.name)
+            json.dump(receipt, f, ensure_ascii=False)
+        temporary.replace(path)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+    return receipt

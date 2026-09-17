@@ -7,6 +7,7 @@ OPERATIONS = {
     "output-profiles": "List deterministic output presets: {}.",
     "import-captions": "Import text cues or original image captions in a new plan revision: {plan, track?, offset?}.",
     "convert-captions": "Explicit local OCR of imported image captions; requires Tesseract; review resulting cues: {plan, language?}.",
+    "rename-output": "Rename a saved export without rendering: {artifact_id, title}.",
     "delete-output": "Delete generated media and receipt, preserving source and plan: {artifact_id}.",
     "preferences": "Read workspace settings, appearance, model grant and credential availability: {}.",
     "configure": "Save workspace settings: {settings, model_grant?, appearance?}.",

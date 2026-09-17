@@ -189,6 +189,7 @@ the parsed values rather than file references. Requests have these shapes:
 - `output-profiles`: `{}`; output preset dimensions/frame rates, deterministic.
 - `caption-tracks`: `{"plan": ...}`; available text/image track IDs, kind, codec, languages and defaults.
 - `import-captions`: `{"plan": ..., "track": "sidecar", "offset": 0}`; a new revision replacing caption cues.
+- `rename-output`: `{"artifact_id": "export_...", "title": "A better name"}`; updates the saved name without rendering. Keeps the media path, bytes, artifact ID and publication time; retains a new title-only plan revision. Dashboard downloads use the new sanitized title.
 - `delete-output`: `{"artifact_id": "export_..."}`; removal result, or explicit failure.
 - `catalog`: `{"title":"Repo Man","scope":"/media/Movies","limit":20,"scan_limit":5000}`. Matches filename/folder clues only; `partial` explicitly reports truncated or unreadable scope.
 - `source-details`: `{"source_id":"source_..."}`; fingerprint, duration and available caption tracks. Optional `"fingerprint_source":false` returns cheap metadata without a content hash, suitable for title/episode resolution; it is not source evidence. Actual frame/caption observations and plans still fingerprint content.

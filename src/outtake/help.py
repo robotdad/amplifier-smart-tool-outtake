@@ -56,6 +56,12 @@ GUIDANCE = {
         "Requires imported image captions plus local Tesseract and language data. Omitted language uses track metadata. Conversion preserves timing and manual cues; repeating it replaces imported text edits. No provider is contacted.",
         "MISSING_PREREQUISITE or OCR_LANGUAGE_UNAVAILABLE names the missing local support. Original captions remain usable. Review OCR words and punctuation regardless of confidence.",
     ),
+    "rename-output": (
+        {"artifact_id": "export_<returned-id>", "title": "A better name"},
+        "Updated receipt with the same artifact ID, path, media hash and publication time.",
+        "Updates only the named export's receipt and retains a new title-only plan revision. No source access, rendering or model call. Download names follow the title; the existing file path stays stable.",
+        "INVALID_INPUT rejects blank or oversized names. ARTIFACT_MISSING requires an existing export; renaming never recreates deleted media.",
+    ),
     "delete-output": (
         {"artifact_id": "export_<returned-id>"},
         "Deletion status, removed filenames and already_absent.",

@@ -473,6 +473,12 @@ class Outtake:
         )
 
     @_io_errors
+    def rename_output(self, artifact_id: str, title: str):
+        from .workspace import rename_output
+
+        return rename_output(self, artifact_id, title)
+
+    @_io_errors
     def delete_output(self, artifact_id):
         from .editing import delete_output
 

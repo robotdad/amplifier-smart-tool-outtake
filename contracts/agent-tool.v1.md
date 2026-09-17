@@ -105,7 +105,10 @@ command names and schema layout remain open.
   An agent may propose it during authorized finding; deterministic calls accept a
   supplied title or use a documented fallback without invoking a model. Names are
   sanitized, collision-safe labels, never identities or caller-controlled paths.
-  Renaming does not overwrite another export or change its media content.
+  A saved export can be renamed without rendering or creating another export.
+  Its identity, media bytes and publication order stay unchanged; its saved title
+  and download name update. Earlier plan revisions remain available. Renaming
+  does not overwrite another export or apply unrelated unsaved edits.
 - **Saved outputs can be deleted deliberately.** Library/CLI and dashboard can
   delete an identified export's generated file and receipt within the output root.
   Source media, retained plans and other exports remain intact. The result reports

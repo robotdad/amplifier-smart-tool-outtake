@@ -162,12 +162,56 @@ def test_play_waits_for_replacement_preview_and_trim_seek(tool, fixture_video, m
         assert page.locator("#video").evaluate("v => v.paused")
         release.set()
         expect(page.locator("#play-selection")).to_have_text("Ⅱ Pause", timeout=20000)
-        page.wait_for_function("() => document.querySelector('#video').currentTime > 1.1", timeout=5000)
+        page.wait_for_function(
+            "() => document.querySelector('#video').currentTime > 1.1", timeout=5000
+        )
         assert not page.locator("#video").evaluate("v => v.paused")
         assert not page.locator("#error").is_visible()
         page.locator("#play-selection").click()
         page.locator("#start-slider").fill("1.37")
         page.locator("#play-selection").click()
-        page.wait_for_function("() => document.querySelector('#video').currentTime > 1.6", timeout=5000)
+        page.wait_for_function(
+            "() => document.querySelector('#video').currentTime > 1.6", timeout=5000
+        )
         assert not page.locator("#error").is_visible()
+        browser.close()
+
+
+def test_rename_output_preserves_media_and_pending_edits(tool, fixture_video):
+    plan = tool.plan(str(fixture_video), 0, 2.5, title="Before", captions_enabled=False)
+    receipt = tool.render(plan)
+    from pathlib import Path
+
+    media = Path(receipt["artifact"])
+    before = media.read_bytes()
+    with tool.dashboard(plan_id=plan.id) as server, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        page.goto(server.url)
+        expect(page.locator("#status-text")).to_have_text(
+            "Ready to refine. Your earlier exports stay unchanged.", timeout=20000
+        )
+        page.locator("#moment-title").fill("A new name")
+        page.locator("#save-output-name").click()
+        expect(page.locator("#status-text")).to_have_text("Name saved. No new export needed.")
+        saved = tool.saved_outputs()
+        assert len(saved) == 1
+        renamed = saved[0]
+        assert renamed["artifact_id"] == receipt["artifact_id"]
+        assert renamed["plan"]["title"] == "A new name"
+        assert renamed["plan"]["id"] != plan.id
+        assert tool.get_plan(plan.id).title == "Before"
+        assert renamed["created_at"] == receipt["created_at"]
+        assert media.read_bytes() == before
+        download = page.request.get(
+            urljoin(server.url, f"/media/export/{receipt['artifact_id']}?download=1")
+        )
+        assert "A-new-name.mp4" in download.headers["content-disposition"]
+        page.locator("#start-slider").fill("0.5")
+        page.locator("#moment-title").fill("Another name")
+        page.locator("#save-output-name").click()
+        expect(page.locator("#status-text")).to_have_text("Name saved. No new export needed.")
+        expect(page.locator("#start-slider")).to_have_value("0.5")
+        expect(page.locator("#dirty-label")).to_have_text("Unsaved edits")
+        assert tool.saved_outputs()[0]["plan"]["start"] == 0
         browser.close()
