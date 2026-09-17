@@ -39,9 +39,11 @@ share. This is an early implementation, exercised on macOS.
 
 Smart finding uses **Amplifier Agent** and needs its own configured model access.
 Your coding agent’s model access is not automatically shared with Outtake. Ask your
-agent to install the `smart` extra and configure OpenAI, Anthropic, or Gemini with
-a suitable vision-capable model. Credentials come from the tool process’s environment;
-the dashboard saves provider/model choices, not keys.
+agent to install the `smart` extra and configure OpenAI, Anthropic, Gemini, GitHub Copilot, or ChatGPT with
+a suitable vision-capable model. API keys and Copilot tokens come from the tool
+process’s environment; ChatGPT uses explicit device sign-in and Amplifier Agent’s
+OAuth cache. The dashboard saves provider/model choices, not credentials.
+See the [provider setup instructions](src/outtake/SMART_TOOL.md#smart-finding-disclosure-and-continuation).
 
 You choose which folders Outtake may inspect and which evidence its provider may
 see. Smart finding uses bounded requests, metadata, captions, and sampled frames

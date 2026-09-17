@@ -88,7 +88,12 @@ def main(argv=None):
             client = Outtake(settings)
             if args.saved_settings:
                 client.restore_configuration()
-            result = getattr(client, args.command.replace("-", "_"))(**request)
+            if args.command == "provider-login":
+                result = client.provider_login(
+                    **request, progress=lambda message: print(message, file=sys.stderr, flush=True)
+                )
+            else:
+                result = getattr(client, args.command.replace("-", "_"))(**request)
         if isinstance(result, BaseModel):
             result = result.model_dump()
         print(json.dumps(result, ensure_ascii=False))

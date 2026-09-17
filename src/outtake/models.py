@@ -141,7 +141,7 @@ class FindRequest(Value):
 
 
 class ModelGrant(Value):
-    provider: Literal["openai", "anthropic", "gemini"]
+    provider: Literal["openai", "anthropic", "gemini", "github-copilot", "openai-chatgpt"]
     model: str = Field(min_length=1, max_length=200)
     allow_request: bool = False
     allow_metadata: bool = False

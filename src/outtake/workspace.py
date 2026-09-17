@@ -12,6 +12,8 @@ from .models import ModelGrant, OuttakeError, Settings
 
 
 def preferences(client):
+    from .providers import COPILOT_ENV, chatgpt_available
+
     path = client.state / "preferences.json"
     saved = json.loads(path.read_text()) if path.exists() else {}
     return {
@@ -20,6 +22,8 @@ def preferences(client):
         "model_grant": saved.get("model_grant"),
         "appearance": saved.get("appearance", "system"),
         "credentials": {
+            "github-copilot": any(os.environ.get(k) for k in COPILOT_ENV),
+            "openai-chatgpt": chatgpt_available(),
             "openai": bool(os.environ.get("OPENAI_API_KEY")),
             "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "gemini": bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")),

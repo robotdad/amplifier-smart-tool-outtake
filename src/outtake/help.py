@@ -56,6 +56,12 @@ GUIDANCE = {
         "Requires imported image captions plus local Tesseract and language data. Omitted language uses track metadata. Conversion preserves timing and manual cues; repeating it replaces imported text edits. No provider is contacted.",
         "MISSING_PREREQUISITE or OCR_LANGUAGE_UNAVAILABLE names the missing local support. Original captions remain usable. Review OCR words and punctuation regardless of confidence.",
     ),
+    "provider-login": (
+        {"provider": "openai-chatgpt", "timeout_seconds": 300},
+        "Login status and provider-owned credential storage description; never tokens.",
+        "Explicit device sign-in. CLI prints verification instructions to stderr while waiting. Complete sign-in yourself. Library callers can pass a progress callback. Login uses no media or model-generation grant. For GitHub Copilot use gh auth login and export GH_TOKEN before starting Outtake.",
+        "Install the smart extra. A timed-out or denied login fails without starting a search; retry only when ready to sign in.",
+    ),
     "rename-output": (
         {"artifact_id": "export_<returned-id>", "title": "A better name"},
         "Updated receipt with the same artifact ID, path, media hash and publication time.",
@@ -204,6 +210,8 @@ GUIDANCE = {
 
 
 PARAMETERS = {
+    "provider": "string; openai-chatgpt for explicit device login",
+    "timeout_seconds": "integer; login deadline, 1–600 seconds",
     "plan": "Plan object; use the complete returned revision",
     "source": "string; approved local source path",
     "source_id": "string; source identity returned by catalog",
@@ -274,7 +282,11 @@ def command_skill(name):
         lines += [
             behavior,
             "",
-            f"Execution: {'model-backed; consumes provider tokens' if model_backed else 'local; no model-provider call'}.",
+            (
+                "Execution: network authentication and provider setup; no model generation."
+                if name == "provider-login"
+                else f"Execution: {'model-backed; consumes provider tokens' if model_backed else 'local; no model-provider call'}."
+            ),
             "",
             "## Arguments and defaults",
             "",
@@ -284,7 +296,7 @@ def command_skill(name):
         for param in inspect.signature(
             getattr(Outtake, name.replace("-", "_"))
         ).parameters.values():
-            if param.name in {"self", "cancelled"}:
+            if param.name in {"self", "cancelled", "progress"}:
                 continue
             default = (
                 "required"

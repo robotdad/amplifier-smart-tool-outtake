@@ -1,6 +1,7 @@
 """Library-owned public capability descriptions shared by help and adapters."""
 
 OPERATIONS = {
+    "provider-login": "Explicit ChatGPT device sign-in: {provider: openai-chatgpt, timeout_seconds?}.",
     "caption-tracks": "List text and image caption tracks for a plan: {plan}.",
     "caption-image": "Resolve a retained original subtitle image for local inspection: {evidence_id, index}. No provider disclosure is implied.",
     "fonts": "List available font IDs and names: {}.",

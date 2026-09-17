@@ -20,7 +20,9 @@ tool-owned caller skill.
 4. Deterministic operations need no provider. For `find`/`make`, install the `smart`
    extra and supply a named provider/model and bounded `ModelGrant`, including the
    permitted request, metadata, caption and frame disclosures. Keys come from the
-   host environment, never request records. Outtake does not inherit the calling
+   host environment (or ChatGPT’s provider-owned OAuth cache), never request records.
+   Use `provider-login` explicitly for ChatGPT device authentication; finding must
+   never launch login. Copilot uses a host GitHub token and requires Copilot access. Outtake does not inherit the calling
    agent's model access. Honor existing authorization without repeatedly asking.
 5. Keep request, source, finding, evidence, plan and output IDs. Identical find/make
    retries reuse retained outcomes; changed intent needs a new request ID. A failed

@@ -210,6 +210,7 @@ the parsed values rather than file references. Requests have these shapes:
 - `render`: `{"plan":{...}}`; produces a new export directory and receipt.
 - `preview`: same input/result as render; actual plan output for local review.
 - `saved-outputs`: `{}`; reads exported receipts newest first, excluding previews. `sort_by` also accepts `oldest`, `name` (A–Z), or `size` (largest first). New receipts record `created_at`; older receipts use the receipt file modification time. Use `{"include_previews":true}` to include them.
+- `provider-login`: `{"provider":"openai-chatgpt","timeout_seconds":300}`; explicit device authentication, with verification instructions on CLI stderr; no model generation.
 - `preferences`: `{}`; current folders/limits, saved model grant and appearance, credential-availability booleans.
 - `configure`: `{"settings":{...},"model_grant":{...},"appearance":"system"}`; shared saved configuration. Omit/null the grant for deterministic use.
 - `review-frames`: `{"plan":{...}}`; five actual ordered source observations spanning the cut.
@@ -277,9 +278,36 @@ finding = tool.find(request, grant)
 plan = tool.select(finding["id"], finding["candidates"][0]["id"])
 ```
 
-Provider choices are `openai`, `anthropic`, and `gemini`. Set respectively
+Provider choices are `openai`, `anthropic`, `gemini`, `github-copilot`, and
+`openai-chatgpt`. For the three API-key providers, set respectively
 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY` (`GEMINI_API_KEY` is a
 fallback). Keys stay in process memory and never enter retained grant/result data.
+GitHub Copilot requires an account with Copilot access. Run `gh auth login`,
+then set `GH_TOKEN` from `gh auth token` in the shell that starts Outtake.
+Credential precedence is `COPILOT_AGENT_TOKEN`, `COPILOT_GITHUB_TOKEN`,
+`GH_TOKEN`, then `GITHUB_TOKEN`. Tokens stay in runtime configuration, never
+plans, grants or preferences.
+
+ChatGPT uses the Amplifier Agent provider-owned OAuth cache, separate from OpenAI
+API keys and the calling agent's sign-in. Start an explicit device login:
+
+```sh
+printf '%s' '{"provider":"openai-chatgpt","timeout_seconds":300}' |
+  outtake provider-login --settings settings.json --input -
+```
+
+Read the verification URL/code on stderr and complete sign-in yourself. Login may
+prepare/download the pinned provider module, but does not inspect media or generate
+a model response. Library callers use `tool.provider_login("openai-chatgpt",
+progress=callback)`. The dashboard explains this CLI setup in Settings; it does not
+start a sign-in flow. Reopen Settings after login to refresh availability.
+Existing provider-cache sign-ins (including Possibly's when using the same
+Amplifier Agent state root) are reused. Expired access tokens are refreshed before
+mounting; missing/invalid credentials fail with explicit login guidance.
+Finding never initiates interactive login. Restart the dashboard after changing
+environment credentials. Credential availability is not proof of account/model
+access, and a selected model must support both tools and images for visual finding.
+
 `vision=True` is the caller's declaration of model capability, not an independent
 capability test. Unsupported image input must fail; it never becomes visual proof.
 Live scenario verification is recorded in the implementation status. Provider

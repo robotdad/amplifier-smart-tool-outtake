@@ -32,6 +32,10 @@ def provider_entry(grant):
             "Amplifier Agent is not installed.",
             "Install Outtake with the smart extra: uv pip install '.[smart]'.",
         ) from None
+    if grant.provider in {"github-copilot", "openai-chatgpt"}:
+        from .providers import entry
+
+        return entry(grant.provider, grant.model)
     revision, variables = PROVIDERS[grant.provider]
     key = next((os.environ[name] for name in variables if os.environ.get(name)), None)
     if not key:
@@ -199,6 +203,9 @@ async def run_agent(owner, entry, stop):
         prepared = copy.copy(engine.session)
         prepared.mount_plan = copy.deepcopy(prepared.mount_plan)
         prepared.mount_plan.update(providers=[entry], tools=[], agents={}, hooks=[])
+        from .providers import refresh_auth
+
+        await refresh_auth(prepared, entry)
         # No source folder is used as an Agent working directory.
         with tempfile.TemporaryDirectory(prefix="outtake-agent-") as workspace:
             session = await prepared.create_session(

@@ -552,7 +552,11 @@ function credentialStatus() {
   const name = $("provider").value;
   $("credential-status").textContent = prefs.credentials[name]
     ? "Host credential available. Keys are never stored here."
-    : "No host credential found. Set the provider’s environment key before starting Outtake.";
+    : name === "openai-chatgpt"
+      ? "Sign in using outtake provider-login (provider: openai-chatgpt), then reopen Settings. Uses the Amplifier Agent OAuth cache."
+      : name === "github-copilot"
+        ? "Run gh auth login, then export GH_TOKEN from gh auth token before starting Outtake. Requires Copilot access."
+        : "No host credential found. Set the provider’s environment key before starting Outtake.";
 }
 function settingsForm() {
   const grant = prefs.model_grant || {};

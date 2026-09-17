@@ -472,6 +472,14 @@ class Outtake:
             )
         )
 
+    def provider_login(
+        self, provider: str, timeout_seconds: int = 300, *, progress=lambda message: None
+    ):
+        """Explicit device login; progress reports the verification URL/code."""
+        from .providers import login
+
+        return login(provider, timeout_seconds, progress)
+
     @_io_errors
     def rename_output(self, artifact_id: str, title: str):
         from .workspace import rename_output
