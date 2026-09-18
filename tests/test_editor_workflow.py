@@ -212,6 +212,130 @@ def test_rename_output_preserves_media_and_pending_edits(tool, fixture_video):
         page.locator("#save-output-name").click()
         expect(page.locator("#status-text")).to_have_text("Name saved. No new export needed.")
         expect(page.locator("#start-slider")).to_have_value("0.5")
-        expect(page.locator("#dirty-label")).to_have_text("Unsaved edits")
+        expect(page.locator("#dirty-label")).to_have_text("All edits saved")
         assert tool.saved_outputs()[0]["plan"]["start"] == 0
+        browser.close()
+
+
+def test_autosave_reopen_original_after_export_deletion(tool, fixture_video):
+    plan = tool.plan(str(fixture_video), 0, 2.5, captions_enabled=False)
+    original_export = tool.render(plan)
+    with tool.dashboard(plan_id=plan.id) as server, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        page.goto(server.url)
+        expect(page.locator("#status-text")).to_have_text(
+            "Ready to refine. Your earlier exports stay unchanged.", timeout=20000
+        )
+        page.locator("#add-cue").click()
+        page.locator("#overlay-text").fill("First recovered line")
+        page.locator("#cue-start").fill("0.15")
+        page.locator("#cue-end").fill("1.1")
+        expect(page.locator("#dirty-label")).to_have_text("All edits saved", timeout=20000)
+        # Autosave must not close or reset the active editor.
+        expect(page.locator("#overlay-text")).to_have_value("First recovered line")
+        page.locator("#add-cue").click()
+        page.locator("#overlay-text").fill("Second recovered line")
+        page.locator("#cue-start").fill("1.2")
+        page.locator("#cue-end").fill("2.4")
+        page.locator("#preview-button").click()
+        expect(page.locator("#status-text")).to_have_text(
+            "Preview ready. Play it to check the cut and sound.", timeout=20000
+        )
+        page.locator("#export-button").click()
+        expect(page.locator(".output-card")).to_have_count(2, timeout=20000)
+        result = next(
+            r for r in tool.saved_outputs() if r["artifact_id"] != original_export["artifact_id"]
+        )
+        resume_url = page.url
+        tool.delete_output(result["artifact_id"])
+        page.locator("#saved-refresh").click()
+        expect(page.locator(".output-card")).to_have_count(1)
+        page.get_by_role("button", name="Open", exact=True).click()
+        expect(page.locator(".cue-chip")).to_have_count(0)
+        page.goto(resume_url)
+        expect(page.locator("#status-text")).to_have_text(
+            "Ready to refine. Your earlier exports stay unchanged.", timeout=20000
+        )
+        expect(page.locator(".cue-chip")).to_have_count(2, timeout=20000)
+        assert not tool.get_plan(plan.id).cues
+        saved = tool.get_workspace(result["plan"]["id"], result["artifact_id"])["plan"]
+        assert [(c["text"], c["start"], c["end"]) for c in saved["cues"]] == [
+            ("First recovered line", 0.15, 1.1),
+            ("Second recovered line", 1.2, 2.4),
+        ]
+        page.locator(".cue-chip").first.click()
+        page.locator("#overlay-text").fill("Immediate reload")
+        page.reload()  # Deliberately beat the debounce timer.
+        expect(page.locator(".cue-chip").first).to_contain_text("Immediate reload", timeout=20000)
+        browser.close()
+
+
+def test_autosave_keeps_edits_entered_during_save(tool, fixture_video, monkeypatch):
+    import threading
+
+    started, release = threading.Event(), threading.Event()
+    original_save = tool.save_workspace
+
+    def delayed_save(*args, **kwargs):
+        if not started.is_set():
+            started.set()
+            assert release.wait(15)
+        return original_save(*args, **kwargs)
+
+    monkeypatch.setattr(tool, "save_workspace", delayed_save)
+    plan = tool.plan(str(fixture_video), 0, 2.5, captions_enabled=False)
+    with tool.dashboard(plan_id=plan.id) as server, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        page.goto(server.url)
+        expect(page.locator("#status-text")).to_have_text(
+            "Ready to refine. Your earlier exports stay unchanged.", timeout=20000
+        )
+        page.locator("#add-cue").click()
+        page.locator("#overlay-text").fill("First version")
+        assert started.wait(5)
+        page.locator("#overlay-text").fill("Typed while saving")
+        page.locator("#cue-end").fill("1.7")
+        release.set()
+        expect(page.locator("#dirty-label")).to_have_text("All edits saved", timeout=10000)
+        saved = tool.get_workspace(plan.id)["plan"]["cues"][0]
+        assert saved["text"] == "Typed while saving" and saved["end"] == 1.7
+        expect(page.locator("#overlay-text")).to_have_value("Typed while saving")
+        browser.close()
+
+
+def test_saved_outputs_keep_independent_workspaces(tool, fixture_video):
+    plan = tool.plan(str(fixture_video), 0, 2.5, title="Full dialogue", captions_enabled=False)
+    full = tool.render(plan)
+    # Reproduce the previous alias migration as well as future browser editing.
+    tool.save_workspace(plan.id, plan, {"title": "Wrong shared draft", "end": 1.0})
+    with tool.dashboard() as server, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        page.goto(server.url)
+        page.locator("#saved-tab").click()
+        full_card = page.locator(".output-card").filter(
+            has=page.get_by_role("heading", name="Full dialogue", exact=True)
+        )
+        full_card.get_by_role("button", name="Open", exact=True).click()
+        expect(page.locator("#moment-title")).to_have_value("Full dialogue")
+        expect(page.locator("#end")).to_have_value("2.5")
+        page.locator("#moment-title").fill("Short reply")
+        page.locator("#end-slider").fill("1.1")
+        page.locator("#export-button").click()
+        expect(page.locator(".output-card")).to_have_count(2, timeout=20000)
+        full_card.get_by_role("button", name="Open", exact=True).click()
+        expect(page.locator("#moment-title")).to_have_value("Full dialogue")
+        expect(page.locator("#end")).to_have_value("2.5")
+        page.reload()
+        expect(page.locator("#moment-title")).to_have_value("Full dialogue")
+        page.locator("#saved-tab").click()
+        short_card = page.locator(".output-card").filter(
+            has=page.get_by_role("heading", name="Short reply", exact=True)
+        )
+        short_card.get_by_role("button", name="Open", exact=True).click()
+        expect(page.locator("#moment-title")).to_have_value("Short reply")
+        expect(page.locator("#end")).to_have_value("1.1")
+        assert tool.artifact(full["artifact_id"])["plan"]["end"] == 2.5
         browser.close()

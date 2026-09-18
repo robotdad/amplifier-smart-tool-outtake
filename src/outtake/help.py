@@ -14,6 +14,24 @@ EXTRA_COMMANDS = {
 
 # Example, result, behavior/defaults and recovery guidance for each capability.
 GUIDANCE = {
+    "finish-workspace-export": (
+        {"workspace_id": "plan_<returned-id>", "artifact_id": "export_<returned-id>"},
+        "The export's workspace_id and editable plan.",
+        "After render, establishes an independent draft for that output. If the source workspace still points to exactly the exported revision, resets it to its original saved selection. Newer unexported edits remain untouched. Earlier plans and media are preserved.",
+        "Use the workspace you rendered and the returned export ID. ARTIFACT_MISSING requires a published export.",
+    ),
+    "get-workspace": (
+        {"plan_id": "plan_<returned-id>"},
+        "An object with workspace_id and the current editable plan.",
+        "Resumes edits saved against this plan or a workspace revision. Supply artifact_id when opening a saved output: each output has an independent draft, surviving export deletion and restart. With no saved workspace, returns the exact requested plan. get-plan always retrieves the exact immutable revision.",
+        "PLAN_MISSING requires the original state folder. This lookup does not validate source bytes; render rechecks them.",
+    ),
+    "save-workspace": (
+        {"workspace_id": "plan_<returned-id>", "plan": "@plan", "changes": {"title": "My moment"}},
+        "The saved immutable Plan revision. Earlier plans and exports remain intact.",
+        "Use workspace_id and plan from get-workspace. Changes use revise fields. Empty changes attach an existing descendant revision, for example after caption import. Dashboard edits autosave through this operation; preview/export flush pending edits first.",
+        "WORKSPACE_CONFLICT refuses a stale concurrent edit. Read get-workspace and reconcile explicitly; never blindly overwrite another editor. Validation failures leave the saved workspace intact.",
+    ),
     "get-evidence": (
         {"evidence_id": "evidence_<returned-id>"},
         "A retained evidence record: source identity plus frames, caption hits, image displays or OCR provenance depending on kind.",
@@ -210,6 +228,7 @@ GUIDANCE = {
 
 
 PARAMETERS = {
+    "workspace_id": "stable plan or export workspace ID returned by get-workspace",
     "provider": "string; openai-chatgpt for explicit device login",
     "timeout_seconds": "integer; login deadline, 1–600 seconds",
     "plan": "Plan object; use the complete returned revision",

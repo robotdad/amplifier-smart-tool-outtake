@@ -1,6 +1,9 @@
 """Library-owned public capability descriptions shared by help and adapters."""
 
 OPERATIONS = {
+    "get-workspace": "Resume saved editing state: {plan_id, artifact_id?}. Each saved output has its own draft.",
+    "finish-workspace-export": "Attach an export to its own workspace and close its published source draft: {workspace_id, artifact_id}.",
+    "save-workspace": "Save an immutable revision and advance its workspace: {workspace_id, plan, changes}.",
     "provider-login": "Explicit ChatGPT device sign-in: {provider: openai-chatgpt, timeout_seconds?}.",
     "caption-tracks": "List text and image caption tracks for a plan: {plan}.",
     "caption-image": "Resolve a retained original subtitle image for local inspection: {evidence_id, index}. No provider disclosure is implied.",

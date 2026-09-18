@@ -386,3 +386,31 @@ cancellation. Other short operations finish within their configured time bounds.
 Cancellation acknowledgement is separate from cleanup completion. Closing the
 handle cancels supported work and waits for cleanup. The dashboard is not a queue,
 a background scheduler, or a required step for agents making exports.
+
+
+### Durable editing workspaces
+
+`get-workspace` / `get_workspace(plan_id)` resumes saved edits and returns
+`workspace_id` plus `plan`. Without saved edits it returns the requested plan.
+`save-workspace` / `save_workspace(workspace_id, plan, changes)` creates an
+immutable revision and advances the workspace atomically. `changes` uses the
+same fields as `revise`; an empty object attaches an existing descendant revision.
+Concurrent stale writes fail with `WORKSPACE_CONFLICT`; reload and reconcile
+explicitly. `get-plan` always returns its exact immutable revision.
+
+The dashboard saves valid edits after a brief typing pause, preserves the active
+text editor, and flushes edits before preview, export, and in-app navigation.
+A local pending-edit buffer protects immediate reloads on the same browser origin;
+server-saved revisions survive browser and dashboard restarts. The workspace link
+resumes saved edits even after an export is deleted. Failed saves remain visibly
+unsaved and are never reported as successful. Deleting an output does not delete
+its workspace or retained revisions.
+
+
+Saved Outputs opens a workspace scoped to that export: call `get-workspace`
+with `artifact_id` as well as `plan_id`. Export workspaces do not follow a shared
+ancestor's draft. After rendering, `finish-workspace-export` takes the source
+`workspace_id` and new `artifact_id`, returns the new output workspace, and closes
+the source draft only if it still matches the published revision. The original
+saved output then opens its own original selection; newer unsaved work is retained.
+Dashboard links carry the output identity so reloads resume the correct draft.

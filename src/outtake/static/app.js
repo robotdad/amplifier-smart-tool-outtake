@@ -1,3 +1,38 @@
+let workspaceId = null, autosaveTimer = null, saving = null, editVersion = 0;
+const workspaceUrl = () => workspaceId?.startsWith("export_")
+  ? `/?plan=${encodeURIComponent(plan.id)}&output=${encodeURIComponent(workspaceId)}`
+  : `/?plan=${encodeURIComponent(workspaceId || plan.id)}`;
+const draftKey = () => `outtake-draft:${workspaceId}`;
+function rememberDraft() {
+  if (!plan || !workspaceId) return;
+  try {
+    localStorage.setItem(draftKey(), JSON.stringify({base: plan.id, changes: editChanges()}));
+  } catch (error) {
+    fail(new Error(`Could not protect pending edits: ${error.message}`));
+  }
+}
+function scheduleSave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    if (activeJob || cleanPreparing) return scheduleSave();
+    saveEdits().catch(error => {
+      $("dirty-label").textContent = "Not saved · check edits";
+      fail(error);
+    });
+  }, 450);
+}
+window.addEventListener("pagehide", () => {
+  if (!dirty || !workspaceId) return;
+  rememberDraft();
+  // Submission continues during navigation; the local buffer also covers offline exits.
+  if (!saving && !activeJob) fetch("/api/call", {
+    method: "POST", keepalive: true,
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({operation: "save_workspace", arguments: {
+      workspace_id: workspaceId, plan, changes: editChanges(),
+    }}),
+  }).catch(() => {});
+});
 let openedOutput = null;
 let captionEvidence = null, captionImages = [];
 "use strict";
@@ -44,24 +79,34 @@ const event = (id, name, fn) =>
   $(id).addEventListener(name, (e) => Promise.resolve(fn(e)).catch(fail));
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function api(operation, args = {}) {
-  const readOnly = [
+const readOperations = [
     "caption_tracks",
     "fonts",
     "output_profiles",
     "preferences",
     "get_plan",
+    "get_workspace",
     "get_finding",
     "get_evidence",
     "artifact",
     "saved_outputs",
-  ].includes(operation);
+  ];
+let operationQueue = Promise.resolve();
+async function api(operation, args = {}) {
+  if (readOperations.includes(operation)) return callApi(operation, args);
+  // Reserve the slot before fetch starts, including while its job ID is pending.
+  const result = operationQueue.then(() => callApi(operation, args));
+  operationQueue = result.catch(() => {});
+  return result;
+}
+async function callApi(operation, args = {}) {
+  const readOnly = readOperations.includes(operation);
   if (activeJob && !readOnly)
     throw new Error(
       "An operation is already running. Wait for it to finish, or cancel it.",
     );
   if (!readOnly) document.body.classList.add("busy");
-  if (!activeJob)
+  if (!activeJob && !["save_workspace", "get_workspace"].includes(operation))
     status(
       {
         find: "Finding the moment in your collection…",
@@ -144,6 +189,9 @@ function setFormat(value) {
 function edited() {
   if (!plan) return;
   dirty = true;
+  editVersion++;
+  rememberDraft();
+  scheduleSave();
   if (mediaOverlay) {
     if (!cleanPreparing && !activeJob) {
       cleanPreparing = true;
@@ -159,7 +207,7 @@ function edited() {
   if (!$("preview-label").hidden)
     $("preview-label").textContent =
       "Preview has earlier edits · preview to update";
-  $("dirty-label").textContent = "Unsaved edits";
+  $("dirty-label").textContent = "Saving edits…";
   $("duration-label").textContent =
     `${Math.max(0, Number($("end").value) - Number($("start").value)).toFixed(2)}s`;
   updateTrim();
@@ -225,19 +273,18 @@ function fillPlan() {
   $("duration-label").textContent = `${(plan.end - plan.start).toFixed(2)}s`;
   $("cut-summary").textContent =
     `${time(plan.start)} → ${time(plan.end)} · ${(plan.end - plan.start).toFixed(2)}s`;
-  history.replaceState(null, "", `/?plan=${encodeURIComponent(plan.id)}`);
+  history.replaceState(null, "", workspaceUrl());
 }
-async function saveEdits() {
-  if (!dirty && $("moment-title").value === plan.title) return;
+function editChanges(validate = false) {
   const start = Number($("start").value),
     end = Number($("end").value);
-  if (
+  if (validate && (
     !Number.isFinite(start) ||
     !Number.isFinite(end) ||
     start < 0 ||
     end <= start ||
     end > plan.source.duration
-  )
+  ))
     throw new Error(
       "Choose a beginning and end inside the source, with the end after the beginning.",
     );
@@ -245,9 +292,7 @@ async function saveEdits() {
   if (frame < start || frame >= end) frame = start;
   storeText();
   const overlay = wholeOverlay.text ? wholeOverlay : null;
-  plan = await api("revise", {
-    plan,
-    changes: {
+  return {
       start,
       end,
       frame,
@@ -261,10 +306,30 @@ async function saveEdits() {
       caption_mode: $("caption-mode").value,
       max_width: $("max-width").value ? Number($("max-width").value) : null,
       fps: $("output-fps").value ? Number($("output-fps").value) : null,
-    },
-  });
-  fillPlan();
-  showEvidence(await api("review_frames", { plan }));
+  };
+}
+async function saveEdits() {
+  clearTimeout(autosaveTimer);
+  if (saving) return saving;
+  if (!plan || !dirty) return;
+  saving = (async () => {
+    while (dirty) {
+      while (activeJob) await pause(100);
+      const version = editVersion;
+      const changes = editChanges(true);
+      const revised = await api("save_workspace", {workspace_id: workspaceId, plan, changes});
+      plan = revised;
+      $("revision-label").textContent = `Revision ${plan.revision}`;
+      $("source-title").textContent = label(plan);
+      history.replaceState(null, "", workspaceUrl());
+      if (version === editVersion) {
+        dirty = false;
+        localStorage.removeItem(draftKey());
+        $("dirty-label").textContent = "All edits saved";
+      } else rememberDraft();
+    }
+  })();
+  try { await saving; } finally { saving = null; }
 }
 function showMedia(receipt) {
   $("empty-preview").hidden = true;
@@ -328,7 +393,17 @@ function showEvidence(evidence) {
     $("preview-label").textContent = "Source evidence";
   }
 }
-async function loadPlan(value, receipt = null, preserveFinding = false) {
+async function loadPlan(value, receipt = null, preserveFinding = false, outputId = null) {
+  await saveEdits();
+  $("edit-controls").disabled = true;
+  $("trim-controls").disabled = true;
+  $("preview-button").disabled = true;
+  $("export-button").disabled = true;
+  $("filmstrip").replaceChildren();
+  const workspace = await api("get_workspace", {plan_id: value.id, artifact_id: receipt?.artifact_id || outputId});
+  workspaceId = workspace.workspace_id;
+  value = workspace.plan;
+  if (receipt && receipt.plan.id !== value.id) receipt = null;
   receipt ||= outputs.find((output) => output.plan.id === value.id) || null;
   openedOutput = receipt;
   $("save-output-name").hidden = !receipt || receipt.purpose === "preview";
@@ -338,6 +413,23 @@ async function loadPlan(value, receipt = null, preserveFinding = false) {
   mediaOverlay = null;
   plan = value;
   fillPlan();
+  const buffered = localStorage.getItem(draftKey());
+  if (buffered) {
+    const draft = JSON.parse(buffered);
+    const contains = (saved, pending) => pending !== null && typeof pending === "object"
+      ? saved != null && Object.entries(pending).every(([key, value]) => contains(saved[key], value))
+        && (!Array.isArray(pending) || saved.length === pending.length)
+      : saved === pending;
+    const matches = contains(plan, draft.changes);
+    if (matches) localStorage.removeItem(draftKey());
+    else if (draft.base === plan.id) {
+      const retained = plan;
+      plan = {...plan, ...draft.changes};
+      fillPlan();
+      plan = retained;
+      edited();
+    } else fail(new Error("This workspace has newer saved edits. A pending local draft was preserved; reconcile it before continuing."));
+  }
   view("workspace");
   $("video").pause();
   $("video").hidden = true;
@@ -676,7 +768,18 @@ event("preview-button", "click", async () => {
 });
 event("export-button", "click", async () => {
   await saveEdits();
+  const exportedVersion = editVersion;
+  const sourceWorkspace = workspaceId;
   const receipt = await api("render", { plan });
+  await saveEdits();
+  const published = await api("finish_workspace_export", {
+    workspace_id: sourceWorkspace, artifact_id: receipt.artifact_id,
+  });
+  if (editVersion === exportedVersion) {
+    workspaceId = published.workspace_id;
+    plan = published.plan;
+    history.replaceState(null, "", workspaceUrl());
+  }
   openedOutput = receipt;
   $("save-output-name").hidden = false;
   await refreshSaved();
@@ -687,6 +790,7 @@ event("export-button", "click", async () => {
 });
 event("workspace-tab", "click", () => view("workspace"));
 event("saved-tab", "click", async () => {
+  await saveEdits();
   await refreshSaved();
   view("saved");
 });
@@ -1101,6 +1205,7 @@ event("import-captions", "click", async () => {
     track: $("caption-track").value || null,
     offset: Number($("caption-offset").value),
   });
+  plan = await api("save_workspace", {workspace_id: workspaceId, plan, changes: {}});
   await loadCaptionImages();
   fillPlan();
   status("Caption import updated. Review the selected appearance and any track warning.");
@@ -1120,6 +1225,7 @@ event("convert-captions", "click", async () => {
   await saveEdits();
   status("Converting subtitle images locally. Review the recognized text when ready.");
   plan = await api("convert_captions", {plan, language: $("ocr-language").value.trim() || null});
+  plan = await api("save_workspace", {workspace_id: workspaceId, plan, changes: {}});
   fillPlan();
   status("Converted with local OCR. Review the words and punctuation; source timing is preserved.");
 });
@@ -1237,7 +1343,7 @@ async function boot() {
   await refreshSaved();
   view("workspace");
   if (params.get("plan"))
-    await loadPlan(await api("get_plan", { plan_id: params.get("plan") }));
+    await loadPlan(await api("get_plan", { plan_id: params.get("plan") }), null, false, params.get("output"));
   else if (params.get("finding")) {
     finding = await api("get_finding", { finding_id: params.get("finding") });
     showMoments();
@@ -1247,22 +1353,17 @@ async function boot() {
 boot().catch(fail);
 
 
-event("moment-title", "input", () => {
-  $("dirty-label").textContent = dirty ? "Unsaved edits" : "Unsaved name";
-});
+event("moment-title", "input", edited);
 event("save-output-name", "click", async () => {
   if (!openedOutput) return;
+  await saveEdits();
   const receipt = await api("rename_output", {
     artifact_id: openedOutput.artifact_id, title: $("moment-title").value,
   });
   openedOutput = receipt;
-  if (!dirty) {
-    plan = receipt.plan;
-    history.replaceState(null, "", `/?plan=${encodeURIComponent(plan.id)}`);
-  }
   $("moment-title").value = receipt.plan.title;
   $("source-title").textContent = receipt.plan.title;
-  $("dirty-label").textContent = dirty ? "Unsaved edits" : "Name saved";
+  $("dirty-label").textContent = dirty ? "Saving edits…" : "All edits saved";
   await refreshSaved();
   status("Name saved. No new export needed.");
 });

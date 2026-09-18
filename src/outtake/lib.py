@@ -506,6 +506,24 @@ class Outtake:
         return Plan.model_validate_json(path.read_text())
 
     @_io_errors
+    def get_workspace(self, plan_id: str, artifact_id: str | None = None):
+        from .workspace import get_workspace
+
+        return get_workspace(self, plan_id, artifact_id)
+
+    @_io_errors
+    def finish_workspace_export(self, workspace_id: str, artifact_id: str):
+        from .workspace import finish_workspace_export
+
+        return finish_workspace_export(self, workspace_id, artifact_id)
+
+    @_io_errors
+    def save_workspace(self, workspace_id: str, plan: Plan | dict, changes: dict):
+        from .workspace import save_workspace
+
+        return save_workspace(self, workspace_id, plan, changes)
+
+    @_io_errors
     def revise(self, plan: Plan | dict, changes: dict):
         """Revise the explicitly supplied base, preserving source and prior revisions."""
         base = Plan.model_validate(plan)
