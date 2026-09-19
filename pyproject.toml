@@ -17,12 +17,16 @@ smart = [
   "openai>=1", "anthropic>=0.70", "google-genai>=1",
   "github-copilot-sdk==1.0.7", "packaging>=20", "httpx>=0.27",
 ]
+mcp = [
+  "mcp>=2.2,<3",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [project.scripts]
 outtake = "outtake.cli:main"
+outtake-mcp = "outtake.mcp_adapter:main"
 
 [project.urls]
 Repository = "https://github.com/robotdad/amplifier-smart-tool-outtake"

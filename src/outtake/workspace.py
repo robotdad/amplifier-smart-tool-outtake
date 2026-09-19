@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sqlite3
-from contextlib import closing
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 from .discovery import observe, save_record
@@ -104,7 +104,22 @@ def artifact(client, artifact_id):
     return result
 
 
-def rename_output(client, artifact_id, title):
+@contextmanager
+def output_lock(client):
+    """Serialize receipt mutations shared by native and portable callers."""
+
+    with closing(_workspace_db(client)) as db:
+        db.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+        except Exception:
+            db.rollback()
+            raise
+        else:
+            db.commit()
+
+
+def rename_output(client, artifact_id, title, expected_plan_id=None, revised_plan_id=None):
     """Update a saved name without reading sources or changing media bytes."""
     import tempfile
     import uuid
@@ -112,7 +127,6 @@ def rename_output(client, artifact_id, title):
 
     from .models import Plan
 
-    receipt = artifact(client, artifact_id)
     if not isinstance(title, str) or not title.strip() or len(title) > 120:
         raise OuttakeError(
             "INVALID_INPUT",
@@ -120,36 +134,44 @@ def rename_output(client, artifact_id, title):
             "Supply the new display name.",
         )
     title = title.strip()
-    if receipt["plan"].get("title") == title:
-        return receipt
-    base = Plan.model_validate(receipt["plan"])
-    revised = client._retain(
-        base.model_copy(
-            update={
-                "id": "plan_" + uuid.uuid4().hex,
-                "parent_id": base.id,
-                "revision": base.revision + 1,
-                "title": title,
-            }
+    with output_lock(client):
+        receipt = artifact(client, artifact_id)
+        if expected_plan_id is not None and receipt["plan"]["id"] != expected_plan_id:
+            raise OuttakeError(
+                "TARGET_CONFLICT",
+                "Saved output changed since it was displayed.",
+                "Refresh the saved-output card and retry against its current plan identity.",
+            )
+        if receipt["plan"].get("title") == title:
+            return receipt
+        base = Plan.model_validate(receipt["plan"])
+        revised = client._retain(
+            base.model_copy(
+                update={
+                    "id": revised_plan_id or "plan_" + uuid.uuid4().hex,
+                    "parent_id": base.id,
+                    "revision": base.revision + 1,
+                    "title": title,
+                }
+            )
         )
-    )
-    path = client.output / artifact_id / "receipt.json"
-    receipt.setdefault(
-        "created_at", datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
-    )
-    receipt["plan"] = revised.model_dump(mode="json")
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w", dir=path.parent, delete=False, encoding="utf-8"
-        ) as f:
-            temporary = Path(f.name)
-            json.dump(receipt, f, ensure_ascii=False)
-        temporary.replace(path)
-    finally:
-        if temporary and temporary.exists():
-            temporary.unlink()
-    return receipt
+        path = client.output / artifact_id / "receipt.json"
+        receipt.setdefault(
+            "created_at", datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+        )
+        receipt["plan"] = revised.model_dump(mode="json")
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=path.parent, delete=False, encoding="utf-8"
+            ) as f:
+                temporary = Path(f.name)
+                json.dump(receipt, f, ensure_ascii=False)
+            temporary.replace(path)
+        finally:
+            if temporary and temporary.exists():
+                temporary.unlink()
+        return receipt
 
 
 def _workspace_db(client):
@@ -157,6 +179,17 @@ def _workspace_db(client):
     db.execute("CREATE TABLE IF NOT EXISTS heads (id TEXT PRIMARY KEY, plan TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS aliases (id TEXT PRIMARY KEY, workspace TEXT NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS bases (id TEXT PRIMARY KEY, plan TEXT NOT NULL)")
+    db.execute(
+        """CREATE TABLE IF NOT EXISTS history (
+           workspace TEXT NOT NULL, plan TEXT NOT NULL, created REAL NOT NULL,
+           PRIMARY KEY (workspace, plan))"""
+    )
+    db.execute(
+        """CREATE TABLE IF NOT EXISTS mutations (
+           workspace TEXT NOT NULL, request_id TEXT NOT NULL, signature TEXT NOT NULL,
+           plan TEXT NOT NULL, created REAL NOT NULL,
+           PRIMARY KEY (workspace, request_id))"""
+    )
     db.commit()
     return db
 
@@ -175,11 +208,32 @@ def get_workspace(client, plan_id, artifact_id=None):
                 initial = client.get_plan(receipt["plan"]["id"])
                 db.execute("INSERT OR IGNORE INTO heads VALUES (?, ?)", (workspace_id, initial.id))
                 db.execute("INSERT OR IGNORE INTO bases VALUES (?, ?)", (workspace_id, initial.id))
+                db.execute(
+                    "INSERT OR IGNORE INTO history VALUES (?, ?, strftime('%s','now'))",
+                    (workspace_id, initial.id),
+                )
         else:
             row = db.execute("SELECT workspace FROM aliases WHERE id = ?", (plan_id,)).fetchone()
             workspace_id = row[0] if row else plan_id
             row = db.execute("SELECT plan FROM heads WHERE id = ?", (workspace_id,)).fetchone()
     plan = client.get_plan(row[0]) if row else initial
+    with closing(_workspace_db(client)) as db, db:
+        base = db.execute("SELECT plan FROM bases WHERE id = ?", (workspace_id,)).fetchone()
+        # Migration/backfill: pre-history workspaces may already point at a newer
+        # head. Keep their retained base and the explicitly reopened identity valid.
+        db.execute(
+            "INSERT OR IGNORE INTO history VALUES (?, ?, strftime('%s','now'))",
+            (workspace_id, plan.id),
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO history VALUES (?, ?, strftime('%s','now'))",
+            (workspace_id, initial.id),
+        )
+        if base:
+            db.execute(
+                "INSERT OR IGNORE INTO history VALUES (?, ?, strftime('%s','now'))",
+                (workspace_id, base[0]),
+            )
     return {"workspace_id": workspace_id, "plan": plan.model_dump(mode="json")}
 
 
@@ -197,7 +251,7 @@ def finish_workspace_export(client, workspace_id, artifact_id):
     return result
 
 
-def save_workspace(client, workspace_id, plan, changes):
+def save_workspace(client, workspace_id, plan, changes, request_id=None, signature=None):
     """Atomically advance an editing workspace, rejecting stale concurrent writers."""
     from .models import Plan
 
@@ -232,7 +286,42 @@ def save_workspace(client, workspace_id, plan, changes):
             )
         revised = client.revise(base, changes) if changes else base
         db.execute("INSERT OR REPLACE INTO heads VALUES (?, ?)", (workspace_id, revised.id))
+        db.execute(
+            "INSERT OR IGNORE INTO history VALUES (?, ?, strftime('%s','now'))",
+            (workspace_id, revised.id),
+        )
+        if request_id is not None:
+            db.execute(
+                "INSERT INTO mutations VALUES (?, ?, ?, ?, strftime('%s','now'))",
+                (workspace_id, request_id, signature, revised.id),
+            )
         if workspace_id.startswith("plan_"):
             for identity in (workspace_id, base.id, revised.id):
                 db.execute("INSERT OR REPLACE INTO aliases VALUES (?, ?)", (identity, workspace_id))
     return revised
+
+
+def workspace_contains(client, workspace_id, plan_id):
+    """True only for plans actually recorded in this workspace's own history."""
+    with closing(_workspace_db(client)) as db:
+        return bool(
+            db.execute(
+                "SELECT 1 FROM history WHERE workspace=? AND plan=?", (workspace_id, plan_id)
+            ).fetchone()
+        )
+
+
+def workspace_mutation(client, workspace_id, request_id, signature):
+    """Return a durable applied result for an exact request; conflict on changed input."""
+    with closing(_workspace_db(client)) as db:
+        row = db.execute(
+            "SELECT signature, plan FROM mutations WHERE workspace=? AND request_id=?",
+            (workspace_id, request_id),
+        ).fetchone()
+    if not row:
+        return None
+    if row[0] != signature:
+        raise OuttakeError(
+            "REQUEST_CONFLICT", "Mutation request ID changed inputs.", "Use a new request ID."
+        )
+    return client.get_plan(row[1])

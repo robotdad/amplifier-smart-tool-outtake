@@ -102,6 +102,11 @@ and remaining limits.
 
 ## Developing or contributing?
 
+An optional host-neutral MCP adapter and portable review App let a person and agent
+work on the same explicitly authorized retained moment. The base CLI and native
+dashboard remain independent of MCP. See [portable review setup and limits](docs/MCP.md)
+for optional installation, configuration, the capability matrix, and reproducible tests.
+
 Clone the repository when you want to work on Outtake itself.
 [`AGENTS.md`](AGENTS.md#develop-from-this-checkout) covers setup, tests, architecture,
 and the contribution workflow.

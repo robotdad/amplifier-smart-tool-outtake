@@ -22,6 +22,21 @@ TEXT_CODECS = {"subrip", "ass", "ssa", "webvtt", "mov_text", "text"}
 IMAGE_CODECS = {"dvd_subtitle", "hdmv_pgs_subtitle", "dvb_subtitle"}
 
 
+def _subtitle_probe_interval(info, stream_index):
+    """Return one valid selected-subtitle clock tick, or the existing microsecond fallback."""
+    streams = info.get("streams", []) if isinstance(info, dict) else []
+    stream = next(
+        (item for item in streams if isinstance(item, dict) and item.get("index") == stream_index),
+        {},
+    )
+    try:
+        numerator, denominator = stream.get("time_base", "").split("/", 1)
+        interval = int(numerator) / int(denominator)
+    except (AttributeError, OverflowError, ValueError, ZeroDivisionError):
+        interval = 0
+    return interval if math.isfinite(interval) and interval > 0 else 0.000001
+
+
 def tracks(path, info):
     result = [
         {
@@ -81,6 +96,8 @@ def import_images(client, plan, track, offset, budget):
     path = client._source(plan.source.path)
     info = probe(path, budget)
     origin = float(video_stream(info).get("start_time", 0))
+    stream_index = int(track["id"].split(":")[1])
+    probe_interval = _subtitle_probe_interval(info, stream_index)
     sid = "source_" + hashlib.sha256(str(path).encode()).hexdigest()
     discovery.save_record(
         client,
@@ -101,7 +118,7 @@ def import_images(client, plan, track, offset, budget):
                     json.dumps(
                         {
                             "path": str(path),
-                            "stream": int(track["id"].split(":")[1]),
+                            "stream": stream_index,
                             "start": plan.start + origin - offset,
                             "end": plan.end + origin - offset,
                         }
@@ -133,7 +150,7 @@ def import_images(client, plan, track, offset, budget):
                     "-i",
                     str(path),
                     "-filter_complex",
-                    f"[0:{track['id'].split(':')[1]}]trim=start={event['start']:.9f}:end={event['start'] + 0.000001:.9f},format=rgba[s]",
+                    f"[0:{stream_index}]trim=start={event['start']:.9f}:end={event['start'] + probe_interval:.9f},format=rgba[s]",
                     "-map",
                     "[s]",
                     "-fps_mode",

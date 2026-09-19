@@ -878,6 +878,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+mcp = [
+    { name = "mcp" },
+]
 smart = [
     { name = "amplifier-agent" },
     { name = "anthropic" },
@@ -903,13 +906,14 @@ requires-dist = [
     { name = "github-copilot-sdk", marker = "extra == 'smart'", specifier = "==1.0.7" },
     { name = "google-genai", marker = "extra == 'smart'", specifier = ">=1" },
     { name = "httpx", marker = "extra == 'smart'", specifier = ">=0.27" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2,<3" },
     { name = "openai", marker = "extra == 'smart'", specifier = ">=1" },
     { name = "packaging", marker = "extra == 'smart'", specifier = ">=20" },
     { name = "pillow", specifier = ">=11,<13" },
     { name = "pydantic", specifier = ">=2.10,<3" },
     { name = "pyyaml", specifier = ">=6,<7" },
 ]
-provides-extras = ["smart"]
+provides-extras = ["smart", "mcp"]
 
 [package.metadata.requires-dev]
 dev = [

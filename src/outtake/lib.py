@@ -274,12 +274,18 @@ class Outtake:
 
     @_io_errors
     def select(
-        self, finding_id: str, candidate_id: str, format="mp4", profile="share", overlay=None
+        self,
+        finding_id: str,
+        candidate_id: str,
+        format="mp4",
+        profile="share",
+        overlay=None,
+        plan_id: str | None = None,
     ):
         """Select a retained, source-checked candidate without another model call."""
         from .intelligence import select
 
-        return select(self, finding_id, candidate_id, format, profile, overlay)
+        return select(self, finding_id, candidate_id, format, profile, overlay, plan_id=plan_id)
 
     @_io_errors
     def make(
@@ -481,16 +487,27 @@ class Outtake:
         return login(provider, timeout_seconds, progress)
 
     @_io_errors
-    def rename_output(self, artifact_id: str, title: str):
+    def rename_output(self, artifact_id: str, title: str, expected_plan_id=None):
         from .workspace import rename_output
 
-        return rename_output(self, artifact_id, title)
+        return rename_output(self, artifact_id, title, expected_plan_id)
 
     @_io_errors
-    def delete_output(self, artifact_id):
+    def delete_output(self, artifact_id, expected_plan_id=None):
         from .editing import delete_output
+        from .workspace import artifact, output_lock
 
-        return delete_output(self, artifact_id)
+        with output_lock(self):
+            if (
+                expected_plan_id is not None
+                and artifact(self, artifact_id)["plan"]["id"] != expected_plan_id
+            ):
+                raise OuttakeError(
+                    "TARGET_CONFLICT",
+                    "Saved output changed since it was displayed.",
+                    "Refresh the saved-output card and retry against its current plan identity.",
+                )
+            return delete_output(self, artifact_id)
 
     @_io_errors
     def get_plan(self, plan_id: str):
@@ -522,6 +539,211 @@ class Outtake:
         from .workspace import save_workspace
 
         return save_workspace(self, workspace_id, plan, changes)
+
+    @_io_errors
+    def open_review(self, target_kind: str, target_id: str, scope="portable"):
+        """Authorize one retained plan, export, or finding for a portable host."""
+        from .collaboration import open_review
+
+        return open_review(self, target_kind, target_id, scope)
+
+    @_io_errors
+    def get_scoped_saved_outputs(self, offset=0, limit=20, sort_by="newest", scope=None):
+        """Read a bounded export collection constrained by review/collection authority."""
+        from .collaboration import get_scoped_saved_outputs
+
+        return get_scoped_saved_outputs(self, offset, limit, sort_by, scope)
+
+    @_io_errors
+    def open_scoped_saved_output(self, artifact_id, scope=None, request_id=None):
+        """Open one authorized export in its retained export-specific workspace."""
+        from .collaboration import open_scoped_saved_output
+
+        return open_scoped_saved_output(self, artifact_id, scope, request_id)
+
+    @_io_errors
+    def rename_scoped_saved_output(
+        self, review_id, artifact_id, title, expected_plan_id=None, scope=None, request_id=None
+    ):
+        from .collaboration import rename_scoped_saved_output
+
+        return rename_scoped_saved_output(
+            self, review_id, artifact_id, title, expected_plan_id, scope, request_id
+        )
+
+    @_io_errors
+    def delete_scoped_saved_output(
+        self, review_id, artifact_id, expected_plan_id=None, scope=None, request_id=None
+    ):
+        from .collaboration import delete_scoped_saved_output
+
+        return delete_scoped_saved_output(
+            self, review_id, artifact_id, expected_plan_id, scope, request_id
+        )
+
+    @_io_errors
+    def describe_scoped_saved_output_media(self, artifact_id, scope=None):
+        from .collaboration import describe_scoped_saved_output_media
+
+        return describe_scoped_saved_output_media(self, artifact_id, scope)
+
+    @_io_errors
+    def read_scoped_saved_output_media(self, artifact_id, offset=0, length=192 * 1024, scope=None):
+        from .collaboration import read_scoped_saved_output_media
+
+        return read_scoped_saved_output_media(self, artifact_id, offset, length, scope)
+
+    @_io_errors
+    def review_snapshot(self, review_id: str, scope=None):
+        from .collaboration import review_snapshot
+
+        return review_snapshot(self, review_id, scope)
+
+    @_io_errors
+    def get_review_draft(self, review_id: str, base_plan_id: str, scope=None):
+        from .collaboration import get_review_draft
+
+        return get_review_draft(self, review_id, base_plan_id, scope)
+
+    @_io_errors
+    def get_review_finding_page(
+        self, review_id: str, finding_id: str, offset=0, limit=20, scope=None
+    ):
+        from .collaboration import get_review_finding_page
+
+        return get_review_finding_page(self, review_id, finding_id, offset, limit, scope)
+
+    @_io_errors
+    def navigate_review(
+        self,
+        review_id: str,
+        view: dict,
+        expected_version: int,
+        request_id: str | None = None,
+        scope=None,
+    ):
+        from .collaboration import navigate_review
+
+        return navigate_review(self, review_id, view, expected_version, scope, request_id)
+
+    @_io_errors
+    def save_review_draft(
+        self,
+        review_id: str,
+        base_plan_id: str,
+        draft: dict,
+        expected_version: int,
+        request_id: str | None = None,
+        scope=None,
+    ):
+        from .collaboration import save_review_draft
+
+        return save_review_draft(
+            self, review_id, base_plan_id, draft, expected_version, scope, request_id
+        )
+
+    @_io_errors
+    def apply_review_changes(
+        self,
+        review_id: str,
+        changes: dict,
+        plan: Plan | dict | None = None,
+        plan_id: str | None = None,
+        request_id: str | None = None,
+        scope=None,
+    ):
+        from .collaboration import apply_review_changes
+
+        if (plan is None) == (plan_id is None):
+            raise OuttakeError(
+                "INVALID_INPUT",
+                "Supply exactly one of plan or plan_id.",
+                "Use the displayed immutable plan identity for portable review.",
+            )
+        base = plan.id if isinstance(plan, Plan) else plan if plan is not None else plan_id
+        return apply_review_changes(self, review_id, base, changes, scope, request_id)
+
+    @_io_errors
+    def select_review_candidate(
+        self,
+        review_id: str,
+        finding_id: str,
+        candidate_id: str,
+        format="mp4",
+        profile="share",
+        request_id=None,
+        scope=None,
+    ):
+        from .collaboration import select_review_candidate
+
+        return select_review_candidate(
+            self, review_id, finding_id, candidate_id, format, profile, scope, request_id
+        )
+
+    @_io_errors
+    def admit_operation(
+        self,
+        request_id: str,
+        operation: str,
+        arguments: dict,
+        grant: ModelGrant | dict | None = None,
+        *,
+        allow_models=True,
+        review_id=None,
+    ):
+        """Admit owned detached work. Direct callers retain existing find/make semantics."""
+        from .collaboration import admit_operation
+
+        return admit_operation(
+            self,
+            request_id,
+            operation,
+            arguments,
+            grant,
+            allow_models=allow_models,
+            review_id=review_id,
+        )
+
+    @_io_errors
+    def get_operation(self, operation_id: str, review_id=None):
+        from .collaboration import get_operation
+
+        return get_operation(self, operation_id, review_id)
+
+    @_io_errors
+    def get_operation_result_page(
+        self, operation_id: str, offset=0, limit=64 * 1024, review_id=None
+    ):
+        from .collaboration import get_operation_result_page
+
+        return get_operation_result_page(self, operation_id, offset, limit, review_id)
+
+    @_io_errors
+    def cancel_operation(self, operation_id: str, review_id=None):
+        from .collaboration import cancel_operation
+
+        return cancel_operation(self, operation_id, review_id)
+
+    @_io_errors
+    def recover_operations(self):
+        from .collaboration import recover_operations
+
+        return recover_operations(self)
+
+    @_io_errors
+    def describe_media(
+        self, review_id: str, kind: str, identity: str, index: int | None = None, scope=None
+    ):
+        """Describe authorized retained export or evidence bytes without exposing a path."""
+        from .collaboration import describe_media
+
+        return describe_media(self, review_id, kind, identity, index, scope)
+
+    @_io_errors
+    def read_media(self, review_id: str, media_id: str, offset=0, length=192 * 1024, scope=None):
+        from .collaboration import read_media
+
+        return read_media(self, review_id, media_id, offset, length, scope)
 
     @_io_errors
     def revise(self, plan: Plan | dict, changes: dict):
@@ -722,7 +944,9 @@ class Outtake:
         plan = Plan.model_validate(plan)
         return self._render_with_budget(plan, Budget(self.settings.limits, cancelled))
 
-    def _render_with_budget(self, plan, budget, purpose="export"):
+    def _render_with_budget(
+        self, plan, budget, purpose="export", artifact_id=None, publish_guard=None, publisher=None
+    ):
         # One render per process; reject instead of waiting outside the operation budget.
         if not _RENDER_LOCK.acquire(blocking=False):
             raise OuttakeError(
@@ -731,11 +955,20 @@ class Outtake:
                 "Retry after it completes.",
             )
         try:
-            return self._render(plan, budget, purpose=purpose)
+            return self._render(
+                plan,
+                budget,
+                purpose=purpose,
+                artifact_id=artifact_id,
+                publish_guard=publish_guard,
+                publisher=publisher,
+            )
         finally:
             _RENDER_LOCK.release()
 
-    def _render(self, plan, budget, purpose="export"):
+    def _render(
+        self, plan, budget, purpose="export", artifact_id=None, publish_guard=None, publisher=None
+    ):
         path, info = self._validate(plan, budget)
         stream = video_stream(info)
         requested = plan.frame if plan.format == "png" else plan.start
@@ -781,8 +1014,19 @@ class Outtake:
             raise OuttakeError(
                 "TIMING_UNAVAILABLE", "Source frame rate is unknown.", "Choose the share profile."
             )
-        artifact_id = _id("export")
+        artifact_id = artifact_id or _id("export")
+        if not re.fullmatch(r"export_[a-f0-9]{32}", artifact_id):
+            raise OuttakeError(
+                "INVALID_ID", "Invalid output identity.", "Use an Outtake export ID."
+            )
         destination = self.output / artifact_id
+        if destination.exists():
+            raise OuttakeError(
+                "OUTPUT_CONFLICT",
+                "The requested output identity already exists.",
+                "Inspect the retained operation instead of publishing over an existing output.",
+                artifact_id,
+            )
         with tempfile.TemporaryDirectory(prefix=".outtake-", dir=self.output) as scratch:
             stage = Path(scratch)
             from .editing import filename as export_filename
@@ -973,5 +1217,32 @@ class Outtake:
             _write(stage / "receipt.json", receipt)
             budget.check(stage)
             # The directory is the publication unit: artifact and receipt become visible together.
-            os.rename(stage, destination)
+            # A retained worker must still own its lease at this exact boundary.
+            if publish_guard is not None and not publish_guard():
+                raise OuttakeError(
+                    "CANCELLED",
+                    "Cancellation or lease loss won before artifact publication.",
+                    "Inspect the retained operation; no new artifact was published.",
+                )
+            if publisher is not None:
+                publisher(stage, destination)
+            else:
+                os.rename(stage, destination)
         return receipt
+
+    @_io_errors
+    def _render_retained(self, plan, artifact_id, operation, owned, publisher):
+        """Internal worker seam: a preassigned identity prevents lost-result ambiguity."""
+        plan = Plan.model_validate(plan)
+        if operation not in {"preview", "render"}:
+            raise OuttakeError(
+                "INVALID_INPUT", "Unknown retained render operation.", "Use preview or render."
+            )
+        return self._render_with_budget(
+            plan,
+            Budget(self.settings.limits, cancelled=lambda: not owned()),
+            purpose="preview" if operation == "preview" else "export",
+            artifact_id=artifact_id,
+            publish_guard=owned,
+            publisher=publisher,
+        )

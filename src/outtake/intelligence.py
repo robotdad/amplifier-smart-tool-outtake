@@ -491,7 +491,9 @@ def find(client, request, grant, cancelled, outer_budget=None):
     return result
 
 
-def select(client, finding_id, candidate_id, format, profile, overlay, budget=None):
+def select(
+    client, finding_id, candidate_id, format, profile, overlay=None, budget=None, plan_id=None
+):
     result = client.get_finding(finding_id)
     matches = [c for c in result.get("candidates", []) if c["id"] == candidate_id]
     if len(matches) != 1:
@@ -509,7 +511,7 @@ def select(client, finding_id, candidate_id, format, profile, overlay, budget=No
     for eid in candidate["evidence_ids"]:
         discovery.validate_evidence(client, client.get_evidence(eid), budget)
     plan = Plan(
-        id=discovery.identity("plan"),
+        id=plan_id or discovery.identity("plan"),
         source=source,
         start=candidate["start"],
         end=candidate["end"],

@@ -112,6 +112,13 @@ checks, immutable revisions, receipts, bounded work and cancellation intact.
 - Define independent expected results for meaningful behavior checks. Verify a fresh
   installed copy and applicable public CLI, decoded media, and browser behavior.
   Unit tests and HTTP success alone do not establish correct media or interaction.
+- For portable collaboration, test exact retries after lost responses, raw drafts
+  bound to their original targets, cross-review resource/operation isolation, and
+  cancellation on both sides of artifact publication. Exercise the real stdio
+  adapter and an independent MCP Apps host; do not substitute a mocked bridge.
+  Base-package imports and deterministic help must remain independent of optional
+  MCP and intelligence backends. Never equate operation admission with artifact
+  success or introduce private host APIs.
 - Report validation honestly: skipped/blocked scenarios are not passes, scripted
   providers do not prove recognition, and human-confirmed cuts require human review.
   Use real results, never canned outputs as evidence.

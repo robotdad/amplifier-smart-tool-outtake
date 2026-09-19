@@ -45,6 +45,31 @@ Agent v0.17.0; provider module revisions are pinned in `agent_runtime.py`. Initi
 Agent/provider preparation can download modules; no source media is part of setup.
 Only macOS has been exercised for this milestone.
 
+### Optional trusted MCP adapter
+
+The base package neither imports nor starts MCP. Install `outtake[mcp]` (or use
+`uv sync --extra mcp` in a checkout) to obtain `outtake-mcp`. First use
+`open-review` to explicitly authorize one retained plan, export, or finding for a
+portable host. Start stdio with caller-owned settings and the exact review IDs:
+
+```sh
+outtake-mcp --settings settings.json --allow-reviews review_<returned-id>
+```
+
+The server does not accept arbitrary paths or conversation IDs as authority. It
+exposes bounded retained review controls and standard scoped MCP media resources. Model
+work through this server is disabled unless startup explicitly adds `--allow-models`;
+each such request still requires its own bounded `ModelGrant`. Read
+`docs/MCP.md` in the source distribution for capability, recovery and host-disclosure
+details. When packaged compiled review HTML is present, it advertises
+`ui://outtake/review`; otherwise it truthfully omits that resource.
+
+To list the caller-authorized configured export collection in the portable Saved
+Outputs tab, explicitly add `--allow-saved-outputs`. Without that flag the tab lists
+only exports reachable from the allowed reviews and their retained workspaces; previews
+and arbitrary local paths remain unavailable. The flag does not grant source-root,
+state-root, or other filesystem access.
+
 ## Caller authority and data
 
 Construct `Outtake(Settings(source_roots=("/media",), output_root="/exports"))`.

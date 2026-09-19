@@ -12,6 +12,14 @@ from outtake import OuttakeError
 
 
 def test_original_pixels_timing_sar_offset_and_staleness(bitmap_tool, bitmap_source):
+    from outtake import subtitles
+
+    assert subtitles._subtitle_probe_interval(
+        {"streams": [{"index": 1, "time_base": "1/1000"}]}, 1
+    ) == pytest.approx(0.001)
+    assert subtitles._subtitle_probe_interval(
+        {"streams": [{"index": 0, "time_base": "1/1"}, {"index": 1, "time_base": "0/1"}]}, 1
+    ) == pytest.approx(0.000001)
     tool = bitmap_tool
     plan = tool.plan(str(bitmap_source), 0, 2, fps=10)
     assert plan.caption_mode == "original" and not plan.cues

@@ -1,7 +1,8 @@
 # Outtake Agent-Tool Contract — v1 (DRAFT)
 
 **Who builds against this:** People using Outtake through external agents, scripts,
-library integrations, and the optional dashboard depend on the same public behavior.
+library integrations, the dashboard and optional portable adapters depend on the
+same public behavior.
 The current implementation covers only part of this contract;
 the full conformance kit below remains an acceptance plan. See
 [implementation status](../docs/IMPLEMENTATION.md) for verified scope.
@@ -48,6 +49,73 @@ traceable artifact. Configuration and permissions belong to the caller.
 13. **Untrusted inputs cannot escape approved roots or execute instructions.** Canonicalize and confine reads/writes, preserve originals unchanged, and use fixed executables with argument vectors, never a shell or caller-supplied FFmpeg filters. Treat captions, paths, model output, and browser requests as data. Cache/state/temp are outside the install tree; outputs go to caller-selected destinations.
 14. **The dashboard is an optional runtime adapter, not a capability gate.** The caller can complete finding, editing, and delivery without opening it. When opened for participation, it presents the current moment directly in a compact workspace with search, actual generated playback, trim/reorder, and per-clip appearance, using the same plans/configuration/validation. Rendering makes the new output available in the same saved-outputs collection used to return to previous requests and exports. Reopening restores the identified source, occurrence, edits, and output choices; subsequent changes preserve earlier exports. Settings expose source/output locations and Amplifier Agent provider/model configuration through the same public behavior, and the interface supports light, dark, and system appearance. Browser presentation and explicit server lifecycle are surface-specific; UI-only domain behavior is forbidden. Launch is explicit, loopback by default, with no automatic LAN exposure; registered artifact IDs replace arbitrary paths, and viewing existing artifacts requires no model credential.
 15. **The installed package truthfully describes its capabilities.** Git installation, one packaged `SMART_TOOL.md`, and root `smart-tool.json` provide documented library/CLI use, manifest location, CLI argv, and a real provider-free deterministic smoke capability. Required manifest fields are nonempty, package/manifest versions agree, prerequisites are documented, and platform claims match verified installations.
+
+## Optional portable adapter (proposed amendment)
+
+Outtake may expose its public library through an optional MCP adapter and a
+portable MCP Apps review view. This is an Outtake capability proposal, not an
+adopted extension of Smart Tool v1. Existing library, CLI and native-dashboard
+obligations remain unchanged.
+
+- **Equivalent domain behavior.** Every meaningful portable control uses an
+  agent-callable public operation with equivalent validation, authorization,
+  targeting and observable results. Supported workflows include bounded finding,
+  candidate/evidence review, selection, revision, preview and export. A published
+  capability matrix distinguishes library, CLI, MCP tools and App controls;
+  omissions and prerequisites are explicit rather than implied parity. A plain
+  MCP client remains useful without an App-capable host.
+- **Optional installation and explicit startup.** Adapter dependencies are
+  optional. Base imports and deterministic operations neither import an
+  intelligence backend nor start a server. Installed help supplies exact adapter
+  installation, launch and configuration guidance. Catalog presence, installation,
+  configuration, connection, advertised capabilities and successful rendering are
+  distinct checks. No undeclared manifest or descriptor fields are introduced.
+- **Standard, host-neutral presentation.** Use official MCP and MCP Apps SDKs,
+  typed tools, scoped resources and a packaged self-contained view with dependency
+  notices. The view is responsive and supports host theme changes. It requires no
+  private host API, external CDN, credential-bearing loopback URL or modification
+  of the native dashboard's embedding protections. Unsupported host capabilities
+  produce useful limits or documented headless alternatives. Ordinary operation
+  handles do not imply MCP Tasks, sampling, elicitation or subscriptions.
+- **Library-owned execution.** Long-running portable operations use retained
+  admission, status, cancellation and recovery capabilities shared with headless
+  callers. Operation lifecycle is distinct from the domain outcomes in clause 10:
+  an accepted or running render is not a `ready` artifact. An operation-admission
+  record identifies acceptance and status lookup; an artifact receipt is separate
+  evidence of committed artifact production. Retain exact targets,
+  effective settings/limits and grants without credentials. Reads and attachment
+  never admit work. A transport timeout is not proof that execution stopped.
+  Public recovery distinguishes known committed results, interruption and
+  uncertain external effects; cancellation preserves earlier committed outputs.
+  Effective cancellation and artifact publication are ordered as specified in
+  the calling-agent contract: cancellation before publication prevents a new
+  artifact; publication first remains `ready` with its artifact receipt. An
+  acknowledged cancellation request alone does not determine the outcome.
+- **Scoped portable material.** Public descriptors identify retained preview,
+  export and evidence bytes by opaque identities with declared type, byte size,
+  integrity and bounded read semantics. The library checks authorized scope and
+  membership, confinement, symlinks, offsets, missing material and changed bytes.
+  A resource handle is not arbitrary filesystem authority. Presenter size limits
+  are explicit; oversized content is not silently truncated or re-encoded. A failed
+  transition clears stale playback and download targets rather than showing old
+  material under a new revision identity.
+- **Separate disclosure boundaries.** Explicitly configuring a portable server
+  defines which retained work and material may be exposed to its trusted host;
+  source access alone does not imply unrestricted host disclosure. Resources and
+  portable results exclude credentials, private reasoning, source paths and
+  dashboard tokens. Delivering scoped preview/export bytes to a host is distinct
+  from Outtake disclosing evidence to its internal provider. Clause 12's limits
+  and raw-source audio/video prohibition remain intact. Model work initiated
+  through the portable server additionally requires explicit server enablement
+  as well as valid bounded operation authority. Direct library/CLI smart calls
+  retain their existing authorization rules and require no portable server.
+  Generated/imported executable content, if presented, stays isolated from the
+  tool-authored control bridge.
+
+Shared review identities, drafts, mutation outcomes, operation-admission records
+and view/work lifecycle follow
+[the calling-agent contract](caller-interaction.v1.md#portable-collaborative-review-proposed-amendment).
+Neither document claims that proposed acceptance cases already pass.
 
 ## Refinement and delivery behavior
 
@@ -207,6 +275,34 @@ count as passed. See implementation status for exact current checks and gaps.
 | AT-10 / 1, 2, 14, 15 | Fresh installed-copy smoke and manifest/descriptor checks pass; explicitly launched browser plays/seeks produced MP4, animates produced GIF, and downloads matching artifacts. Routine workspace and saved-output tasks fit 1366×768; advanced controls may scroll. | HTTP 200, thumbnails, canned samples, cache, or a source checkout masks failure. |
 | AT-11 / 1, 6, 7, 12, 14 | A headless result can be opened directly in the workspace; rendering adds an identified export to the shared saved-output collection. Reopening two distinct sources restores each source, occurrence, cut/frame, overlays and output choices; a new revision/export preserves the earlier one. Settings round-trip through public configuration, preserve work in progress, and obey existing access/disclosure authority. Light/dark/system remain legible, with system following host appearance. | Only title labels change; stale candidates or captions leak between sources; an old export is overwritten; dashboard-only configuration; theme changes affect chrome but obscure controls. |
 
+### Portable adapter acceptance cases
+
+These extend the acceptance plan, not the adopted upstream conformance kit.
+
+- Install the built base and optional-adapter distributions outside the checkout.
+  Verify provider-free imports/help and ordinary CLI use without MCP installed;
+  discovery and retained reads must not initialize any configured intelligence
+  backend. Verify packaged App HTML and dependency notices.
+- Exercise actual stdio transport both headlessly and through an independent
+  official Apps bridge. Compare library, CLI, model-tool and App results for the
+  same retained target, including rejected/stale mutations. Record the exact tool,
+  SDK and host revisions; an advertised resource is not proof of rendered support.
+- Use generated video with independently known frames/timing to verify actual
+  playback, stills and byte-identical downloads. Missing, changed, out-of-scope,
+  symlinked, malformed and oversized resource requests fail visibly. A failed
+  second load must not leave the first revision's preview or download active.
+- Reopen without rendering or generation; race edits and delayed draft saves
+  across views; lose accepted mutation responses; restart a transport during
+  work; cancel before and during execution. Verify receipt identity, no repeated
+  spending, preserved drafts/outputs and honest terminal cleanup.
+- Confirm private credentials/paths never reach portable responses or view
+  context, unsupported protocol features are not advertised, unknown usage is
+  not reported as zero, and caller-reported identity cannot establish human
+  acceptance. Document source-versus-host-versus-provider disclosure boundaries.
+- Publish commit-pinned review installation/configuration instructions and a
+  capability matrix consistent with executed checks. Packaging and scripted
+  intelligence tests do not establish scene recognition or human-approved cuts.
+
 ## Reserved / open questions (NOT frozen)
 
 - A local collection has been made available for investigation. Each execution must use the applicable caller-approved source/output scope; its private location is not a product default or prerequisite. Broader cataloging is not implied.
@@ -218,6 +314,21 @@ count as passed. See implementation status for exact current checks and gaps.
 - Upstream Smart Tools revision, supported platforms, package runner, and exact smoke invocation must be pinned from verified implementation evidence before release.
 
 ## Changelog
+
+- **2026-09-19** — Owner approved the revised portable adapter amendments as the
+  implementation baseline. The contract remains DRAFT, not locked; approval is
+  not evidence of shipped support or completed acceptance checks.
+
+- **2026-09-19** — Clarified operation-admission records versus artifact receipts
+  and the cancellation/publication boundary; scoped extra server enablement to
+  portable-server model work, preserving direct library/CLI authorization.
+  These remain proposed contract amendments, not shipped behavior.
+
+- **2026-09-18** — Proposed optional MCP/MCP Apps capability with public-library
+  parity, separate operation lifecycle and domain outcomes, scoped portable media,
+  explicit host/provider disclosure, optional packaging and independent-host tests.
+  Existing CLI and native-dashboard obligations remain unchanged. Awaiting owner
+  review; no blanket conformance to the upstream discussion proposal is claimed.
 
 - **2026-09-16** — Agreed default caption import, timed text and font discovery,
   unified playback, source context, export titles/deletion and sharing-size controls;
