@@ -13,6 +13,8 @@ use_cases:
   - Find a remembered moment using captions, clues and permitted source frames
 platforms:
   - macos
+  - linux
+  - windows
 requires:
   - name: FFmpeg and FFprobe
     purpose: Inspect and render local media; manifest and schemas work without them.
@@ -43,7 +45,6 @@ need no model credentials. For smart finding install the `smart` extra (`uv sync
 `uv tool install "outtake[smart] @ git+https://github.com/robotdad/amplifier-smart-tool-outtake"`. This pins Amplifier
 Agent v0.17.0; provider module revisions are pinned in `agent_runtime.py`. Initial
 Agent/provider preparation can download modules; no source media is part of setup.
-Only macOS has been exercised for this milestone.
 
 ### Optional trusted MCP adapter
 
@@ -161,7 +162,7 @@ reimports captions. After expanding a cut, explicitly import to add new captions
 `fonts` returns the default plus a small set of familiar installed fonts. Nondefault
 IDs bind exact font bytes; unavailable/changed fonts fail rather than substitute.
 The browser live draft approximates typography; Preview edits uses the actual font.
-Font availability beyond macOS is unverified. `output-profiles` reports presets:
+Available fonts depend on the host. `output-profiles` reports presets:
 mobile (480px, GIF 10fps / MP4 24fps), share (1280px, GIF 15fps / MP4 30fps),
 editing (source size/rate, GIF 15fps). Width never upscales; `max_width` (160..3840)
 and `fps` (1..60) explicitly override presets. Actual bytes/settings are in receipts;

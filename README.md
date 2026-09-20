@@ -37,7 +37,7 @@ participate in the dashboard. No repository checkout is needed to use the tool.
 Use a coding agent that can install and run local tools and, for the optional
 workspace, open a browser. Outtake requires Python 3.12+, Git, uv, and FFmpeg with
 FFprobe. Your video files must be locally accessible, including through a mounted
-share. This is an early implementation, exercised on macOS.
+share.
 
 Smart finding uses **Amplifier Agent** and needs its own configured model access.
 Your coding agent’s model access is not automatically shared with Outtake. Ask your
