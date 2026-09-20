@@ -9,13 +9,14 @@ library, CLI, dashboard, catalog, preview, or render use.
 Install the optional adapter alongside Outtake:
 
 ```sh
-# from this review checkout
+# from a checkout
 uv sync --extra mcp
+# or install the published main branch
+uv tool install "outtake[mcp] @ git+https://github.com/robotdad/amplifier-smart-tool-outtake"
 ```
 
-This work is on `feat/mcp-collaborative-review`. Until the review commit is published,
-use the checkout command above. The PR will include a verified commit-pinned installation:
-`uv tool install "outtake[mcp] @ git+https://github.com/robotdad/amplifier-smart-tool-outtake@<published-commit>"`.
+MCP support is available on `main`. For a reproducible installation, append an
+explicit commit SHA to the Git URL.
 
 Create a review identity with the normal public API or JSON CLI first. This is the
 explicit decision to disclose one retained finding, plan, or export to a trusted
