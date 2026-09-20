@@ -1,0 +1,55 @@
+{
+  "kind": "tool",
+  "key": "outtake",
+  "name": "Outtake",
+  "accent": "#885b39",
+  "title": "Outtake | Amplifier Smart Tools",
+  "promise": "Find the moment. Make it yours.",
+  "description": "Start with a scene you remember. Find it in your local video, review the proposed cut, and shape a clip, GIF, or still worth keeping.",
+  "image": "docs/images/saved-outputs.png",
+  "alt": "Outtake Saved Outputs workspace showing exported videos, a poster frame, and a GIF.",
+  "caption": "The real Outtake Saved Outputs workspace. Retained exports stay available to download or reopen for another revision.",
+  "width": 1265,
+  "height": 1024,
+  "flow_title": "From a remembered scene to a finished cut.",
+  "flow_intro": "Bring the clue and the source collection. Your agent helps find the exchange and opens it for review.",
+  "steps": [
+    [
+      "Describe what you remember.",
+      "Start with a title, a line, an action, or a scene. Choose the source folders the tool may inspect."
+    ],
+    [
+      "Review and shape the moment.",
+      "Check the proposed cut, adjust its boundaries, and loop the selected range. Keep source captions or add your own timed text."
+    ],
+    [
+      "Export and return.",
+      "Save MP4, GIF, or PNG with a sharing preset. Reopen a retained result when you want another version; original media stays unchanged."
+    ]
+  ],
+  "detail_title": "A workspace for the remembered detail.",
+  "details": [
+    [
+      "Find with evidence.",
+      "Smart finding uses permitted metadata, captions, and sampled frames. It retains evidence and uncertainty alongside proposed cuts."
+    ],
+    [
+      "Make the cut precise.",
+      "Trim with two handles, place the playhead, and preview rendered edits. Captions and timed text stay part of the editing flow."
+    ],
+    [
+      "Keep your outputs together.",
+      "Saved Outputs gathers exports for downloading and reopening. Earlier exports and original media remain available."
+    ]
+  ],
+  "prompt": "Use Outtake to help me find a scene in my local video collection. Read outtake --help, help me choose the permitted folders, and narrow the moment from my description. Open the proposed cut so I can trim and export it.",
+  "install": "uv tool install \"outtake[smart] @ git+https://github.com/robotdad/amplifier-smart-tool-outtake\"\nouttake --help",
+  "prerequisites": "Python 3.12+, Git, uv, and FFmpeg with FFprobe. Source video must be locally accessible, including through a mounted share.",
+  "model_note": "Smart finding needs its own configured vision-capable model. Explicit cuts, previews, exports, and caption handling work locally without a model.",
+  "guide": "src/outtake/SMART_TOOL.md",
+  "related": [
+    "showrun",
+    "unfold",
+    "stories"
+  ]
+}

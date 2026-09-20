@@ -1,5 +1,7 @@
 # Outtake
 
+[Website source and preview instructions](site/README.md)
+
 **Remember the moment. Make it yours.**
 
 ![Outtake’s Saved Outputs: clips and GIFs from Silicon Valley, The Venture Bros., Repo Man, and Blade Runner, ready to reopen or download.](docs/images/saved-outputs.png)

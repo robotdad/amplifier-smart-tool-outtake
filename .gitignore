@@ -6,3 +6,6 @@
 __pycache__/
 *.pyc
 /mcp-app/node_modules/
+
+# Generated GitHub Pages output
+/_site/
