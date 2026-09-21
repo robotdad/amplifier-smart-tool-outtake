@@ -66,3 +66,11 @@ The overview illustration has a pause control that also pauses its title mark. R
 preferences select the still image by default. Shared media lives in
 `site/theme/assets/` and is included by the theme sync script. The original briefs
 and generation provenance live in `amplifier-smart-tools/site/artwork/`.
+
+## Product video
+
+The `video` field in `site.json` points to the reviewed MP4; `image` is its poster.
+The synchronized family theme supplies muted looping playback, native controls,
+a full-size link and shared pause-motion control. Reduced motion starts paused;
+without JavaScript native playback controls remain available. The README uses
+an Outtake-rendered GIF of the same edit. See `docs/images/README.md` for provenance.

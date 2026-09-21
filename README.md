@@ -4,7 +4,7 @@
 
 **Remember the moment. Make it yours.**
 
-![Outtake’s Saved Outputs: clips and GIFs from Silicon Valley, The Venture Bros., Repo Man, and Blade Runner, ready to reopen or download.](docs/images/saved-outputs.png)
+[![Outtake turns a moment from your own media collection into a GIF.](docs/images/outtake-demo.gif)](https://robotdad.github.io/amplifier-smart-tool-outtake/)
 
 Outtake helps you and your agent find and shape moments from your own film and
 television collection. Describe the scene you remember—a line, a gesture, a

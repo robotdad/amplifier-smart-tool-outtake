@@ -6,11 +6,11 @@
   "title": "Outtake | Amplifier Smart Tools",
   "promise": "Find the moment. Make it yours.",
   "description": "Start with a scene you remember. Find it in your local video, review the proposed cut, and shape a clip, GIF, or still worth keeping.",
-  "image": "docs/images/saved-outputs.png",
-  "alt": "Outtake Saved Outputs workspace showing exported videos, a poster frame, and a GIF.",
-  "caption": "The real Outtake Saved Outputs workspace. Retained exports stay available to download or reopen for another revision.",
-  "width": 1265,
-  "height": 1024,
+  "image": "docs/images/outtake-demo-poster.png",
+  "alt": "A real Claude Code request opens a local Mighty Boosh clip in Outtake; the clip plays in a steady workspace while GIF is selected, followed by the exported GIF.",
+  "caption": "Ask your agent, review your own moment, choose GIF. A 20-second edit of real Claude Code and Outtake footage.",
+  "width": 1440,
+  "height": 900,
   "flow_title": "From a remembered scene to a finished cut.",
   "flow_intro": "Bring the clue and the source collection. Your agent helps find the exchange and opens it for review.",
   "steps": [
@@ -51,5 +51,6 @@
     "showrun",
     "unfold",
     "stories"
-  ]
+  ],
+  "video": "docs/images/outtake-demo.mp4"
 }

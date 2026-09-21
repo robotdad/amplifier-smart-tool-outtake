@@ -9,3 +9,39 @@ The screenshot contains frames from Silicon Valley, The Venture Bros., Repo Man,
 and Blade Runner. Those works belong to their respective rights holders. Source
 media and exported clips are not included in this repository. The capture excludes
 browser chrome, local filesystem paths, credentials and authenticated session URLs.
+
+## Product demo loop
+
+`outtake-demo.mp4`, `outtake-demo.gif`, and `outtake-demo-poster.png` are a
+20-second silent demo approved by the owner, prepared on 2026-09-20. Showrun recorded the real
+Claude Code request, initial response, and response containing an inline Outtake
+dashboard preview. The edit zooms into that preview and dissolves for 0.64s into
+a fresh, continuous 7.4-second Showrun browser recording of the dark workspace.
+The clip is already playing; the only interaction in this shot is selecting GIF.
+There are no internal cuts, scrolling, or text-editing actions in the workspace
+shot. The ending shows the actual seven-second GIF exported from that plan,
+without added captions. The poster is from the continuous workspace shot.
+
+The initial response plays at half speed. Waiting and setup are omitted; local
+setup details and the authenticated session URL are masked. Browser capture excludes chrome from the workspace take. The owner's original Mighty Boosh media is
+unchanged. Automatic scene finding and caption editing are not demonstrated.
+Film and television content belongs to its respective rights holders.
+
+Vid's public trim/audio/caption operations compile the edit, with FFmpeg camera
+zooms and three dissolves (0.24s, 0.64s, and 0.52s). The 1440×900 silent H.264
+MP4 has fast-start metadata. Outtake's public plan/render operations produce
+the README GIF at 960px and 25fps over 0–20s, with caption import disabled because
+the editorial footer captions are already burned in. Earlier cuts, raw Showrun
+recordings, edit plans, and receipts are preserved in ignored working storage.
+Private paths, credentials, authenticated URLs, and state stores are excluded
+from published imagery.
+
+The native opening is sampled footage. The workspace uses Showrun’s browser
+compositor capture encoded at 25fps, replacing the native capture limited to
+approximately 5 samples per second. A two-second moving-video crop retained
+47 of 50 frames after near-duplicate removal, versus 6 in the old native shot.
+The final source GIF and README GIF are both rendered at 25fps.
+
+Decoded footage was visually inspected. Browser checks cover desktop/mobile
+layout, duration, looping, pause/resume, reduced motion, and native controls
+without JavaScript. The owner approved this cut for publication.
