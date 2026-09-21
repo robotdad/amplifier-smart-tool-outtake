@@ -8,7 +8,7 @@
   "description": "Start with a scene you remember. Find it in your local video, review the proposed cut, and shape a clip, GIF, or still worth keeping.",
   "image": "docs/images/outtake-demo-poster.png",
   "alt": "A real Claude Code request opens a local Mighty Boosh clip in Outtake; the clip plays in a steady workspace while GIF is selected, followed by the exported GIF.",
-  "caption": "Ask your agent, review your own moment, choose GIF. A 20-second edit of real Claude Code and Outtake footage.",
+  "caption": "Ask your agent, review your own moment, choose GIF. A 26-second edit of real Claude Code and Outtake footage.",
   "width": 1440,
   "height": 900,
   "flow_title": "From a remembered scene to a finished cut.",
