@@ -29,6 +29,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Outtake: local media library and bounded Amplifier finding."
     )
+    parser.add_argument("-V", "--version", action="version", version=manifest()["version"])
     commands = parser.add_subparsers(dest="command", required=True)
     dashboard = commands.add_parser("dashboard", help="Explicitly launch the local workspace.")
     dashboard.add_argument("--settings", required=True)

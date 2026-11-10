@@ -1,6 +1,100 @@
 import json
 import os
 import subprocess
+import sys
+import tomllib
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+
+import pytest
+
+
+@pytest.mark.parametrize("flag", ["-V", "--version"])
+def test_version_flags(flag):
+    from outtake import manifest
+
+    result = call(flag)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == f"{manifest()['version']}\n"
+    assert result.stderr == ""
+
+
+def test_manifest_version_matches_project():
+    from outtake import manifest
+
+    project = tomllib.loads(
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert manifest()["version"] == project["project"]["version"]
+
+
+def test_manifest_version_matches_installed_metadata():
+    from outtake import manifest
+
+    try:
+        installed = version("outtake")
+    except PackageNotFoundError:
+        pytest.skip("Outtake distribution metadata is not installed.")
+    assert manifest()["version"] == installed
+
+
+def test_help_version_headers_match_library():
+    from outtake import manifest, skill
+    from outtake.help import command_names
+
+    header = f"Version: {manifest()['version']}"
+    for command in (None, *command_names()):
+        result = call(*([] if command is None else [command]), "--help")
+        assert result.returncode == 0, (command, result.stderr)
+        assert result.stderr == ""
+        assert result.stdout == skill(command) + "\n"
+        lines = result.stdout.splitlines()
+        assert [line for line in lines if line.startswith("Version:")] == [header]
+        repository = next(i for i, line in enumerate(lines) if line.startswith("Repository:"))
+        assert lines[repository + 1] == header
+        assert repository + 1 < next(i for i, line in enumerate(lines) if line.startswith("# "))
+
+
+def test_version_and_help_without_optional_backends():
+    script = """
+import contextlib
+import importlib.abc
+import io
+import sys
+
+class BlockOptionalBackends(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".")[0] in {
+            "amplifier_agent_lib", "mcp", "openai", "anthropic", "google", "copilot"
+        }:
+            raise AssertionError(f"Optional backend imported: {fullname}")
+
+sys.meta_path.insert(0, BlockOptionalBackends())
+from outtake import manifest, skill
+from outtake.cli import main
+from outtake.help import command_names
+
+expected = manifest()["version"]
+for arguments, output in [
+    (["-V"], expected),
+    (["--version"], expected),
+    (["--help"], skill()),
+    *[([command, "--help"], skill(command)) for command in command_names()],
+]:
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            code = main(arguments)
+        except SystemExit as exc:
+            code = exc.code
+    assert code == 0, (arguments, code, stderr.getvalue())
+    assert stdout.getvalue() == output + "\\n", arguments
+    assert stderr.getvalue() == "", arguments
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script], text=True, capture_output=True, timeout=30
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def call(*arguments, input=None):

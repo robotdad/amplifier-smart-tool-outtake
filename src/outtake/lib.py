@@ -61,10 +61,12 @@ def skill(command=None):
     from .help import EXTRA_COMMANDS
 
     root = importlib.resources.files("outtake")
+    metadata = manifest()
     return (
         f'<skill_content name="outtake">\nSkill directory: {root}\n'
-        "Repository: https://github.com/robotdad/amplifier-smart-tool-outtake\n\n"
-        + manifest()["body"]
+        "Repository: https://github.com/robotdad/amplifier-smart-tool-outtake\n"
+        f"Version: {metadata['version']}\n\n"
+        + metadata["body"]
         + "\n## Available capabilities\n"
         + "\n".join(
             f"- `{name}` [{'model-backed' if name in {'find', 'make'} else 'deterministic'}] — {description} See `outtake {name} --help`."
