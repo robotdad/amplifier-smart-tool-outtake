@@ -469,7 +469,7 @@ def command_names():
 
 
 def command_skill(name):
-    from .lib import Outtake
+    from .lib import Outtake, manifest
 
     if name not in command_names():
         raise ValueError(f"Unknown capability: {name}")
@@ -479,6 +479,7 @@ def command_skill(name):
         f'<skill_content name="outtake-{name}">',
         f"Skill directory: {root}",
         "Repository: https://github.com/robotdad/amplifier-smart-tool-outtake",
+        f"Version: {manifest()['version']}",
         "Relative paths below are relative to the skill directory.",
         "",
         f"# outtake {name}",
